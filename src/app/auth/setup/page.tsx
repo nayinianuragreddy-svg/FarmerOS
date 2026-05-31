@@ -6,6 +6,7 @@ import { Sprout, Loader2, Check } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { INDIAN_STATES, CATEGORY_CONFIG } from '@/lib/constants'
 import { CropCategory } from '@/lib/types'
+import { lookupPincode } from '@/lib/api'
 
 type Role = 'farmer' | 'buyer'
 type SetupStep = 'role' | 'info' | 'crops' | 'done'
@@ -18,6 +19,7 @@ export default function SetupPage() {
   const [step, setStep] = useState<SetupStep>('role')
   const [role, setRole] = useState<Role>('buyer')
   const [loading, setLoading] = useState(false)
+  const [pincodeLoading, setPincodeLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [preferredCrops, setPreferredCrops] = useState<CropCategory[]>([])
 
@@ -26,6 +28,19 @@ export default function SetupPage() {
   })
 
   useEffect(() => { if (!user) router.replace('/auth') }, [user, router])
+
+  // Auto-fill district and state when a valid 6-digit pincode is entered
+  useEffect(() => {
+    if (!/^\d{6}$/.test(form.pincode)) return
+    setPincodeLoading(true)
+    lookupPincode(form.pincode).then(result => {
+      if (result) {
+        setForm(f => ({ ...f, district: result.district, state: result.state }))
+        setErrors(e => ({ ...e, district: '', state: '' }))
+      }
+      setPincodeLoading(false)
+    })
+  }, [form.pincode])
 
   const setF = (k: string, v: string) => {
     setForm(f => ({ ...f, [k]: v }))
@@ -207,8 +222,13 @@ export default function SetupPage() {
                   </div>
                   <div>
                     <label className="text-white/40 text-xs font-semibold uppercase tracking-wider block mb-1.5">Pincode *</label>
-                    <input value={form.pincode} onChange={e => setF('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="500001" className={inputCls('pincode')} maxLength={6} />
+                    <div className="relative">
+                      <input value={form.pincode} onChange={e => setF('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="500001" className={inputCls('pincode')} maxLength={6} />
+                      {pincodeLoading && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-400 animate-spin" />
+                      )}
+                    </div>
                     {errors.pincode && <p className="text-red-400 text-xs mt-1">{errors.pincode}</p>}
                   </div>
                 </div>

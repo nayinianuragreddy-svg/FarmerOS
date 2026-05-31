@@ -10,6 +10,7 @@ import CropCardPopup from './CropCardPopup'
 import MapControls from './MapControls'
 import CategoryPillsBar from './CategoryPillsBar'
 import BottomSheet from './BottomSheet'
+import { MOCK_PINS } from '@/lib/mock-data'
 
 const SATELLITE_STYLE: StyleSpecification = {
   version: 8,
@@ -25,6 +26,199 @@ const SATELLITE_STYLE: StyleSpecification = {
     },
   },
   layers: [{ id: 'satellite', type: 'raster', source: 'esri-satellite' }],
+}
+
+function formatQuantity(quantity: number, unit: string): string {
+  // Convert to kg equivalent for display
+  let kgAmount = quantity
+  if (unit === 'quintal') kgAmount = quantity * 100
+  if (unit === 'tonne') kgAmount = quantity * 1000
+
+  if (kgAmount >= 1000000) return `${Math.round(kgAmount / 1000000)}KT`
+  if (kgAmount >= 1000) return `${Math.round(kgAmount / 1000)}T`
+  if (kgAmount >= 100) return `${Math.round(kgAmount)}kg`
+  return `${kgAmount}kg`
+}
+
+interface NominatimResult {
+  lat: string
+  lon: string
+  display_name: string
+  place_id: number
+}
+
+interface FloatingSearchProps {
+  onFlyTo: (lat: number, lng: number) => void
+  onMapClick: () => void
+}
+
+function FloatingSearch({ onFlyTo, onMapClick: _onMapClick }: FloatingSearchProps) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<NominatimResult[]>([])
+  const [isOpen, setIsOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([])
+      setIsOpen(false)
+      return
+    }
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(async () => {
+      setIsLoading(true)
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ' India')}&format=json&limit=5&countrycodes=in`,
+          { headers: { 'User-Agent': 'FarmerOS/1.0' } },
+        )
+        const data: NominatimResult[] = await res.json()
+        setResults(data)
+        setIsOpen(data.length > 0)
+      } catch {
+        // ignore
+      } finally {
+        setIsLoading(false)
+      }
+    }, 300)
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [query])
+
+  // Close on click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleSelect = (result: NominatimResult) => {
+    onFlyTo(parseFloat(result.lat), parseFloat(result.lon))
+    setQuery(result.display_name.split(',')[0])
+    setIsOpen(false)
+    setResults([])
+  }
+
+  return (
+    <div
+      ref={wrapperRef}
+      style={{
+        position: 'absolute',
+        top: '12px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '360px',
+        maxWidth: 'calc(100vw - 32px)',
+        zIndex: 30,
+      }}
+    >
+      {/* Input */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '0 14px',
+          height: '44px',
+          background: 'rgba(7,12,10,0.9)',
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: isOpen ? '12px 12px 0 0' : '12px',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+          transition: 'border-radius 0.1s ease',
+        }}
+      >
+        <span style={{ fontSize: '16px', flexShrink: 0, opacity: 0.5 }}>🔍</span>
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search crops or location..."
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: 'white',
+            fontSize: '14px',
+            fontFamily: 'Inter, sans-serif',
+          }}
+        />
+        {isLoading && (
+          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>…</span>
+        )}
+        {query && !isLoading && (
+          <button
+            onClick={() => { setQuery(''); setResults([]); setIsOpen(false) }}
+            style={{
+              flexShrink: 0,
+              background: 'none',
+              border: 'none',
+              color: 'rgba(255,255,255,0.4)',
+              cursor: 'pointer',
+              fontSize: '16px',
+              lineHeight: 1,
+              padding: 0,
+            }}
+          >
+            ×
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown */}
+      {isOpen && results.length > 0 && (
+        <div
+          style={{
+            background: 'rgba(7,12,10,0.97)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: '0 0 12px 12px',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            overflow: 'hidden',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+          }}
+        >
+          {results.map((r) => (
+            <button
+              key={r.place_id}
+              onClick={() => handleSelect(r)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                width: '100%',
+                padding: '10px 14px',
+                background: 'none',
+                border: 'none',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                color: 'rgba(255,255,255,0.8)',
+                fontSize: '13px',
+                fontFamily: 'Inter, sans-serif',
+                transition: 'background 0.1s ease',
+              }}
+              onMouseEnter={e => { (e.target as HTMLElement).closest('button')!.style.background = 'rgba(255,255,255,0.06)' }}
+              onMouseLeave={e => { (e.target as HTMLElement).closest('button')!.style.background = 'none' }}
+            >
+              <span style={{ flexShrink: 0, fontSize: '14px' }}>📍</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {r.display_name.length > 60 ? r.display_name.slice(0, 60) + '…' : r.display_name}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 interface FarmerOSMapProps {
@@ -45,15 +239,31 @@ export default function FarmerOSMap({
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<maplibregl.Marker[]>([])
+  const mandiMarkersRef = useRef<maplibregl.Marker[]>([])
   const selectedMarkerEl = useRef<HTMLElement | null>(null)
 
   const [selectedPin, setSelectedPin] = useState<MapPin | null>(null)
   const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null)
   const [showHeatmap, setShowHeatmap] = useState(false)
-  const [activeCategories, setActiveCategories] = useState<CropCategory[]>([])
+  const [isMandis, setIsMandis] = useState(false)
+  const [activeCategory, setActiveCategory] = useState<CropCategory | null>(null)
   const [organicOnly, setOrganicOnly] = useState(false)
   const [mapReady, setMapReady] = useState(false)
   const [mapStyle, setMapStyle] = useState<'dark' | 'satellite'>('dark')
+  // Merge mock + external pins, dedup by id
+  function mergePins(external: MapPin[]): MapPin[] {
+    const extIds = new Set(external.map(p => p.id))
+    const mockOnly = MOCK_PINS.filter(p => !extIds.has(p.id))
+    return [...external, ...mockOnly]
+  }
+
+  const [allPins, setAllPins] = useState<MapPin[]>(() => mergePins(pins))
+
+  // Sync when external pins update
+  useEffect(() => {
+    setAllPins(mergePins(pins))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pins])
 
   // ─── INIT MAP ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -84,12 +294,33 @@ export default function FarmerOSMap({
       setPopupPos(null)
     })
 
+    // Fetch real listings
+    fetchRealListings()
+
     return () => {
       map.current?.remove()
       map.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  async function fetchRealListings() {
+    try {
+      const res = await fetch('/api/listings?lat=20.5937&lng=78.9629&radius=2000')
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data) && data.length > 0) {
+          setAllPins(prev => {
+            const existingIds = new Set(data.map((p: MapPin) => p.id))
+            const dedupedMock = prev.filter(p => !existingIds.has(p.id))
+            return [...data, ...dedupedMock]
+          })
+        }
+      }
+    } catch {
+      // Silently fall back to mock pins
+    }
+  }
 
   function addHeatmapLayer() {
     if (!map.current) return
@@ -128,7 +359,6 @@ export default function FarmerOSMap({
     setMapStyle(next)
     setMapReady(false)
 
-    // Remove existing markers before style switch
     markersRef.current.forEach(m => m.remove())
     markersRef.current = []
     selectedMarkerEl.current = null
@@ -142,11 +372,11 @@ export default function FarmerOSMap({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapStyle])
 
-  // ─── FILTERED PINS ────────────────────────────────────────────────────────
+  // ─── FILTERED PINS ────────────────────────────────────────────────────────────
   const filteredPins = useCallback(() => {
-    let result = pins
-    if (activeCategories.length > 0) {
-      result = result.filter(p => activeCategories.includes(p.crop_category))
+    let result = allPins
+    if (activeCategory) {
+      result = result.filter(p => p.crop_category === activeCategory)
     }
     if (organicOnly) {
       result = result.filter(p => p.is_organic)
@@ -160,14 +390,13 @@ export default function FarmerOSMap({
       )
     }
     return result
-  }, [pins, activeCategories, organicOnly, searchQuery])
+  }, [allPins, activeCategory, organicOnly, searchQuery])
 
-  // ─── GEOCODING for search ─────────────────────────────────────────────────
+  // ─── GEOCODING for external search query ────────────────────────────────────
   useEffect(() => {
     if (!searchQuery.trim() || !map.current) return
     const q = searchQuery.toLowerCase()
-    // If search matches any pin, don't geocode
-    const matchesCrop = pins.some(p => p.crop_name.toLowerCase().includes(q))
+    const matchesCrop = allPins.some(p => p.crop_name.toLowerCase().includes(q))
     if (matchesCrop) return
 
     async function geocodeLocation(query: string) {
@@ -185,15 +414,15 @@ export default function FarmerOSMap({
           })
         }
       } catch {
-        // Silently ignore geocoding errors
+        // ignore
       }
     }
 
     const timer = setTimeout(() => geocodeLocation(searchQuery), 600)
     return () => clearTimeout(timer)
-  }, [searchQuery, pins])
+  }, [searchQuery, allPins])
 
-  // ─── RENDER PINS ──────────────────────────────────────────────────────────
+  // ─── RENDER PINS (Zillow-style pill markers) ─────────────────────────────────
   useEffect(() => {
     if (!map.current || !mapReady) return
 
@@ -203,50 +432,78 @@ export default function FarmerOSMap({
 
     const visible = filteredPins()
 
-    visible.forEach(pin => {
+    visible.forEach((pin, idx) => {
       const config = CATEGORY_CONFIG[pin.crop_category]
+      const quantityLabel = formatQuantity(pin.quantity, pin.unit)
 
       const el = document.createElement('div')
-      el.className = 'farmeros-pill-pin'
-      el.setAttribute('data-id', pin.id)
-
-      const priceLabel = pin.expected_price
-        ? `₹${pin.expected_price}/${pin.unit}`
-        : `${pin.quantity}${pin.unit}`
-
-      el.innerHTML = `
-        <div class="pill-content" style="--color: ${config.mapColor}">
-          <span class="pill-emoji">${config.emoji}</span>
-          <span class="pill-label">${priceLabel}</span>
-          ${pin.is_organic ? '<span class="pill-organic">🌿</span>' : ''}
-        </div>
+      el.className = 'crop-pin'
+      el.style.cssText = `
+        background: ${config.mapColor};
+        color: white;
+        padding: 5px 12px;
+        border-radius: 9999px;
+        font-size: 12px;
+        font-weight: 700;
+        font-family: Inter, sans-serif;
+        white-space: nowrap;
+        cursor: pointer;
+        border: 2px solid rgba(255,255,255,0.3);
+        box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
+        user-select: none;
+        opacity: 0;
+        position: relative;
+        z-index: 1;
       `
+      el.textContent = `${config.emoji} ${quantityLabel}`
 
-      el.addEventListener('click', e => {
+      el.onmouseenter = () => {
+        el.style.transform = 'scale(1.15)'
+        el.style.zIndex = '10'
+        el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.6)'
+      }
+      el.onmouseleave = () => {
+        if (!el.classList.contains('selected')) {
+          el.style.transform = 'scale(1)'
+          el.style.zIndex = '1'
+          el.style.boxShadow = '0 2px 12px rgba(0,0,0,0.4)'
+        }
+      }
+      el.onclick = (e) => {
         e.stopPropagation()
-
-        // Deselect previous
         if (selectedMarkerEl.current) {
           selectedMarkerEl.current.classList.remove('selected')
+          selectedMarkerEl.current.style.transform = 'scale(1)'
+          selectedMarkerEl.current.style.zIndex = '1'
+          selectedMarkerEl.current.style.boxShadow = '0 2px 12px rgba(0,0,0,0.4)'
         }
         el.classList.add('selected')
+        el.style.transform = 'scale(1.2)'
+        el.style.zIndex = '20'
+        el.style.boxShadow = `0 6px 24px ${config.mapColor}80`
+        el.style.border = '2px solid white'
         selectedMarkerEl.current = el
 
         setSelectedPin(pin)
         onPinClick?.(pin)
 
-        // Only set popup position in compact mode (for popup card usage)
         if (compact) {
           const rect = el.getBoundingClientRect()
           setPopupPos({ x: rect.left + rect.width / 2, y: rect.top })
         }
-      })
+      }
 
-      const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
         .setLngLat([pin.longitude, pin.latitude])
         .addTo(map.current!)
 
       markersRef.current.push(marker)
+
+      // Stagger-animate entrance
+      setTimeout(() => {
+        el.style.opacity = '1'
+      }, idx * 30)
     })
 
     // Update heatmap data
@@ -263,14 +520,65 @@ export default function FarmerOSMap({
     }
   }, [mapReady, filteredPins, compact, onPinClick])
 
-  // ─── HEATMAP TOGGLE ───────────────────────────────────────────────────────
+  // ─── HEATMAP TOGGLE ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!map.current || !mapReady || !map.current.getLayer('listings-heatmap')) return
     map.current.setLayoutProperty('listings-heatmap', 'visibility', showHeatmap ? 'visible' : 'none')
   }, [showHeatmap, mapReady])
 
+  // ─── MANDIS TOGGLE ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!map.current || !mapReady) return
+
+    if (!isMandis) {
+      mandiMarkersRef.current.forEach(m => m.remove())
+      mandiMarkersRef.current = []
+      return
+    }
+
+    async function loadMandis() {
+      if (!map.current) return
+      const center = map.current.getCenter()
+      try {
+        const res = await fetch(`/api/nearby-mandis?lat=${center.lat}&lng=${center.lng}&radius=100`)
+        if (res.ok) {
+          const data = await res.json()
+          if (Array.isArray(data)) {
+            data.forEach((mandi: { lat: number; lng: number; name: string }) => {
+              const el = document.createElement('div')
+              el.style.cssText = `
+                width: 32px; height: 32px;
+                border-radius: 50%;
+                background: rgba(249,115,22,0.9);
+                border: 2px solid rgba(255,255,255,0.4);
+                display: flex; align-items: center; justify-content: center;
+                font-size: 14px;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(249,115,22,0.6);
+              `
+              el.textContent = '🏪'
+              const m = new maplibregl.Marker({ element: el })
+                .setLngLat([mandi.lng, mandi.lat])
+                .addTo(map.current!)
+              mandiMarkersRef.current.push(m)
+            })
+          }
+        }
+      } catch {
+        // Silently fail
+      }
+    }
+
+    loadMandis()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMandis, mapReady])
+
   const flyToIndia = () => {
     map.current?.flyTo({ center: INDIA_CENTER, zoom: INDIA_DEFAULT_ZOOM, duration: 1400, essential: true })
+  }
+
+  const flyToLocation = (lat: number, lng: number) => {
+    map.current?.flyTo({ center: [lng, lat], zoom: 10, duration: 1200 })
   }
 
   const handleCloseSheet = () => {
@@ -278,6 +586,10 @@ export default function FarmerOSMap({
     setPopupPos(null)
     if (selectedMarkerEl.current) {
       selectedMarkerEl.current.classList.remove('selected')
+      selectedMarkerEl.current.style.transform = 'scale(1)'
+      selectedMarkerEl.current.style.zIndex = '1'
+      selectedMarkerEl.current.style.boxShadow = '0 2px 12px rgba(0,0,0,0.4)'
+      selectedMarkerEl.current.style.border = '2px solid rgba(255,255,255,0.3)'
       selectedMarkerEl.current = null
     }
   }
@@ -312,19 +624,22 @@ export default function FarmerOSMap({
         overflow: 'hidden',
       }}
     >
-      {/* Category Pills Bar */}
+      {/* Category Pills Bar — fixed 56px strip */}
       <CategoryPillsBar
-        activeCategories={activeCategories}
-        onCategoryChange={setActiveCategories}
+        activeCategory={activeCategory}
+        onCategoryChange={setActiveCategory}
         organicOnly={organicOnly}
         onOrganicToggle={() => setOrganicOnly(v => !v)}
-        totalPins={pins.length}
+        totalPins={allPins.length}
       />
 
-      {/* Map area + Bottom Sheet wrapper */}
+      {/* Map area + overlays */}
       <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
         {/* Map canvas */}
         <div ref={mapContainer} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+
+        {/* Floating search */}
+        <FloatingSearch onFlyTo={flyToLocation} onMapClick={handleCloseSheet} />
 
         {/* Controls */}
         <MapControls
@@ -333,22 +648,45 @@ export default function FarmerOSMap({
           onReset={flyToIndia}
           mapStyle={mapStyle}
           onToggleStyle={toggleStyle}
+          isMandis={isMandis}
+          onToggleMandis={() => setIsMandis(v => !v)}
         />
 
         {/* Live pin count badge */}
-        <div className="absolute bottom-6 left-4 z-10 pointer-events-none">
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '24px',
+            left: '16px',
+            zIndex: 10,
+            pointerEvents: 'none',
+          }}
+        >
           <div
-            className="flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-medium"
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 14px',
+              borderRadius: '9999px',
+              fontSize: '12px',
+              fontWeight: 500,
               background: 'rgba(6,9,14,0.85)',
               border: '1px solid rgba(255,255,255,0.08)',
               backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
               color: 'rgba(255,255,255,0.5)',
             }}
           >
             <span
-              className="w-1.5 h-1.5 rounded-full bg-emerald-400"
-              style={{ boxShadow: '0 0 6px #10b981' }}
+              style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: '#10b981',
+                boxShadow: '0 0 6px #10b981',
+                flexShrink: 0,
+              }}
             />
             {visibleCount} crop{visibleCount !== 1 ? 's' : ''} on map
           </div>

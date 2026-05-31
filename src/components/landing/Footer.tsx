@@ -7,117 +7,92 @@ export default function Footer() {
   return (
     <footer
       style={{
-        background: '#030508',
+        background: '#040806',
         borderTop: '1px solid rgba(255,255,255,0.06)',
-        padding: '64px 24px 32px',
+        padding: '32px 24px',
       }}
     >
       <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-        {/* Three columns */}
+        {/* Row 1 */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '48px',
-            marginBottom: '64px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '16px',
+            marginBottom: '20px',
+            paddingBottom: '20px',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          {/* Col 1 — Logo + tagline */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <div
+          {/* Logo */}
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+            <div
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '7px',
+                background: 'rgba(0,201,122,0.12)',
+                border: '1px solid rgba(0,201,122,0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Sprout style={{ width: '15px', height: '15px', color: '#00C97A' }} />
+            </div>
+            <span style={{ color: '#FFFFFF', fontWeight: 700, fontSize: '16px', letterSpacing: '-0.02em' }}>
+              FarmerOS
+            </span>
+          </Link>
+
+          {/* Tagline */}
+          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
+            India&apos;s crop discovery map
+          </span>
+
+          {/* Social icons (placeholder) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {['𝕏', 'in', '▷'].map((icon, i) => (
+              <a
+                key={i}
+                href="#"
                 style={{
                   width: '32px',
                   height: '32px',
                   borderRadius: '8px',
-                  background: 'rgba(0,201,122,0.15)',
-                  border: '1px solid rgba(0,201,122,0.3)',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  color: 'rgba(255,255,255,0.4)',
+                  textDecoration: 'none',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  transition: 'background 0.2s, color 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget as HTMLAnchorElement
+                  el.style.background = 'rgba(255,255,255,0.1)'
+                  el.style.color = 'rgba(255,255,255,0.8)'
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLAnchorElement
+                  el.style.background = 'rgba(255,255,255,0.05)'
+                  el.style.color = 'rgba(255,255,255,0.4)'
                 }}
               >
-                <Sprout style={{ width: '18px', height: '18px', color: '#00C97A' }} />
-              </div>
-              <span style={{ color: '#FFFFFF', fontWeight: 700, fontSize: '18px', letterSpacing: '-0.02em' }}>
-                FarmerOS
-              </span>
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', lineHeight: 1.65 }}>
-              India&apos;s crop map.
-              <br />
-              Free forever.
-            </p>
-          </div>
-
-          {/* Col 2 — Links */}
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', marginBottom: '20px' }}>
-              PLATFORM
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {[
-                { label: 'For Farmers', href: '#for-farmers' },
-                { label: 'For Buyers', href: '#for-buyers' },
-                { label: 'List a Crop', href: '/auth' },
-                { label: 'Explore Map', href: '/map' },
-              ].map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  style={{
-                    color: 'rgba(255,255,255,0.55)',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                  }}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* Col 3 — Built with */}
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)', marginBottom: '20px' }}>
-              BUILT WITH
-            </div>
-            <p
-              style={{
-                color: 'rgba(255,255,255,0.55)',
-                fontSize: '14px',
-                lineHeight: 1.65,
-                marginBottom: '20px',
-              }}
-            >
-              Built with ❤️ for 146 million farmers
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {['MapLibre GL JS', 'Carto Dark Tiles', 'Supabase', 'ONDC Ready'].map((tech) => (
-                <span
-                  key={tech}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '12px',
-                    color: 'rgba(255,255,255,0.35)',
-                    fontFamily: 'JetBrains Mono, Courier New, monospace',
-                  }}
-                >
-                  <span style={{ color: '#00C97A', fontSize: '10px' }}>▸</span> {tech}
-                </span>
-              ))}
-            </div>
+                {icon}
+              </a>
+            ))}
           </div>
         </div>
 
-        {/* Bottom row */}
+        {/* Row 2 */}
         <div
           style={{
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            paddingTop: '24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -125,11 +100,35 @@ export default function Footer() {
             gap: '12px',
           }}
         >
-          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
-            © 2026 FarmerOS · Free for Indian farmers · MIT License
-          </span>
-          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.2)' }}>
-            Made in India 🇮🇳
+          {/* Nav links */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+            {[
+              { label: 'For Farmers', href: '#for-farmers' },
+              { label: 'For Buyers', href: '#for-buyers' },
+              { label: 'About', href: '#about' },
+              { label: 'Privacy', href: '#' },
+            ].map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                style={{
+                  color: 'rgba(255,255,255,0.4)',
+                  textDecoration: 'none',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  transition: 'color 0.2s',
+                }}
+                onMouseEnter={(e) => ((e.target as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.75)')}
+                onMouseLeave={(e) => ((e.target as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.4)')}
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+
+          {/* Copyright */}
+          <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)' }}>
+            © 2026 FarmerOS. Free forever.
           </span>
         </div>
       </div>

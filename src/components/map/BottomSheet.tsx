@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useRef, type TouchEvent, type MouseEvent } from 'react'
-import { MapPin as MapPinIcon, Scale, Star, Phone, Lock, Leaf, X, ChevronUp } from 'lucide-react'
+import { useEffect, useState, useRef, type TouchEvent as ReactTouchEvent, type MouseEvent as ReactMouseEvent } from 'react'
+import { MapPin as MapPinIcon, Scale, Star, Phone, Lock, Leaf, X } from 'lucide-react'
 import { MapPin } from '@/lib/types'
 import { CATEGORY_CONFIG } from '@/lib/constants'
 import Link from 'next/link'
@@ -15,27 +15,25 @@ interface BottomSheetProps {
   totalPins?: number
 }
 
-type SheetState = 'collapsed' | 'peek' | 'open'
-
-type CategoryConfig = { label: string; emoji: string; mapColor: string; color: string; [key: string]: unknown }
-
-const MOCK_MANDI_PRICES: Record<string, number> = {
-  'Tomato': 17,
-  'Onion': 12,
-  'Potato': 15,
-  'Wheat - Sharbati': 23,
-  'Rice - Basmati': 38,
-  'Chilli (Guntur)': 180,
-  'Turmeric': 145,
-  'Groundnut': 65,
-  'Soybean': 43,
-  'Cotton - Long Staple': 72,
+const MOCK_MANDI_PRICES: Record<string, { price: number; market: string }> = {
+  'Tomato':              { price: 17,  market: 'Azadpur, Delhi' },
+  'Onion':              { price: 12,  market: 'Lasalgaon, Nashik' },
+  'Potato':             { price: 15,  market: 'Agra, UP' },
+  'Wheat - Sharbati':   { price: 23,  market: 'Bhopal, MP' },
+  'Rice - Basmati':     { price: 38,  market: 'Karnal, Haryana' },
+  'Chilli (Guntur)':    { price: 180, market: 'Guntur, AP' },
+  'Turmeric':           { price: 145, market: 'Erode, TN' },
+  'Groundnut':          { price: 65,  market: 'Rajkot, Gujarat' },
+  'Soybean':            { price: 43,  market: 'Indore, MP' },
+  'Cotton - Long Staple':{ price: 72, market: 'Surendranagar, Gujarat' },
 }
 
-function getMandiPrice(pin: MapPin): number {
+function getMandiData(pin: MapPin): { price: number; market: string } | null {
   if (MOCK_MANDI_PRICES[pin.crop_name]) return MOCK_MANDI_PRICES[pin.crop_name]
-  if (pin.expected_price) return Math.round(pin.expected_price * 0.85)
-  return 0
+  if (pin.expected_price) {
+    return { price: Math.round(pin.expected_price * 0.85), market: 'Regional Mandi' }
+  }
+  return null
 }
 
 export default function BottomSheet({
@@ -44,124 +42,88 @@ export default function BottomSheet({
   onClose,
   totalPins = 0,
 }: BottomSheetProps) {
-  const [sheetState, setSheetState] = useState<SheetState>('collapsed')
-  const [isDesktop, setIsDesktop] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
   const dragStartY = useRef<number>(0)
   const isDragging = useRef(false)
+  const sheetRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const check = () => setIsDesktop(window.innerWidth >= 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-
-  // Open sheet when a pin is selected
   useEffect(() => {
     if (pin) {
-      setSheetState('open')
+      // Small delay to ensure transition plays
+      requestAnimationFrame(() => setIsOpen(true))
     } else {
-      setSheetState('collapsed')
+      setIsOpen(false)
     }
   }, [pin])
 
-  const getTranslateY = (): string => {
-    if (!pin) {
-      return sheetState === 'collapsed' ? 'calc(100% - 48px)' : '0px'
-    }
-    switch (sheetState) {
-      case 'collapsed': return 'calc(100% - 48px)'
-      case 'peek': return 'calc(100% - 200px)'
-      case 'open': return 'calc(100% - 380px)'
-      default: return 'calc(100% - 48px)'
-    }
-  }
-
-  const handleDragStart = (e: TouchEvent | MouseEvent) => {
+  const handleDragStart = (e: ReactTouchEvent | ReactMouseEvent) => {
     isDragging.current = true
-    dragStartY.current = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY
+    dragStartY.current = 'touches' in e ? e.touches[0].clientY : (e as ReactMouseEvent).clientY
   }
 
-  const handleDragEnd = (e: TouchEvent | MouseEvent) => {
+  const handleDragEnd = (e: ReactTouchEvent | ReactMouseEvent) => {
     if (!isDragging.current) return
     isDragging.current = false
-    const endY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as MouseEvent).clientY
+    const endY = 'changedTouches' in e ? e.changedTouches[0].clientY : (e as ReactMouseEvent).clientY
     const delta = endY - dragStartY.current
-
-    if (delta < -40) {
-      if (sheetState === 'collapsed') setSheetState('peek')
-      else if (sheetState === 'peek') setSheetState('open')
-    } else if (delta > 40) {
-      if (sheetState === 'open') setSheetState('peek')
-      else if (sheetState === 'peek') setSheetState('collapsed')
-      else if (sheetState === 'collapsed') onClose()
+    if (delta > 50) {
+      onClose()
     }
   }
 
-  const mandiPrice = pin ? getMandiPrice(pin) : 0
-  const priceVsMandi = pin?.expected_price && mandiPrice > 0
-    ? Math.round(((pin.expected_price - mandiPrice) / mandiPrice) * 100)
+  const mandiData = pin ? getMandiData(pin) : null
+  const priceVsMandi = pin?.expected_price && mandiData
+    ? Math.round(((pin.expected_price - mandiData.price) / mandiData.price) * 100)
     : 0
 
-  // ── DESKTOP: floating card bottom-left ─────────────────────────────────────
-  if (isDesktop) {
-    if (!pin) return null
-    const config = CATEGORY_CONFIG[pin.crop_category]
-    return (
-      <div
-        className="fixed bottom-6 left-4 z-30 w-80 overflow-hidden pointer-events-auto"
-        style={{
-          background: 'rgba(8, 11, 18, 0.97)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: '20px',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          animation: 'slideUpCard 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-        }}
-      >
-        <style>{`
-          @keyframes slideUpCard {
-            from { opacity: 0; transform: translateY(20px) scale(0.97); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-          }
-        `}</style>
-        <DesktopCardContent
-          pin={pin}
-          config={config}
-          isLoggedIn={isLoggedIn}
-          mandiPrice={mandiPrice}
-          priceVsMandi={priceVsMandi}
-          onClose={onClose}
-        />
-      </div>
-    )
-  }
+  const config = pin ? CATEGORY_CONFIG[pin.crop_category] : null
 
-  // ── MOBILE: bottom sheet ───────────────────────────────────────────────────
   return (
-    <div
-      className="fixed inset-x-0 bottom-0 z-30 pointer-events-auto"
-      style={{
-        transform: `translateY(${getTranslateY()})`,
-        transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-        willChange: 'transform',
-      }}
-    >
+    <>
+      {/* Overlay backdrop — only visible when sheet is open with a pin */}
+      {isOpen && pin && (
+        <div
+          onClick={onClose}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 28,
+            background: 'rgba(0,0,0,0.2)',
+          }}
+        />
+      )}
+
+      {/* Sheet */}
       <div
+        ref={sheetRef}
         style={{
-          background: 'rgba(6, 9, 14, 0.98)',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '20px 20px 0 0',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          minHeight: '380px',
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 29,
+          transform: isOpen && pin ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+          willChange: 'transform',
+          maxHeight: '60vh',
+          overflowY: 'auto',
+          background: '#0D1810',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '24px 24px 0 0',
           paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+          pointerEvents: isOpen && pin ? 'auto' : 'none',
         }}
+        onClick={e => e.stopPropagation()}
       >
         {/* Drag handle */}
         <div
-          className="flex flex-col items-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            paddingTop: '12px',
+            paddingBottom: '8px',
+            cursor: 'grab',
+          }}
           onMouseDown={handleDragStart}
           onMouseUp={handleDragEnd}
           onTouchStart={handleDragStart}
@@ -169,254 +131,299 @@ export default function BottomSheet({
         >
           <div
             style={{
-              width: '36px',
+              width: '40px',
               height: '4px',
-              borderRadius: '2px',
-              background: 'rgba(255,255,255,0.18)',
+              borderRadius: '9999px',
+              background: 'rgba(255,255,255,0.2)',
             }}
           />
         </div>
 
-        {/* Content */}
-        {!pin ? (
-          <div className="flex items-center justify-between px-5 py-2">
-            <div className="flex items-center gap-2">
+        {pin && config && (
+          <div style={{ padding: '0 20px 20px' }}>
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                  <h2
+                    style={{
+                      color: 'white',
+                      fontSize: '22px',
+                      fontWeight: 700,
+                      fontFamily: 'Inter, sans-serif',
+                      margin: 0,
+                    }}
+                  >
+                    {config.emoji} {pin.crop_name}
+                  </h2>
+                  {pin.is_organic && (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '3px 10px',
+                        borderRadius: '9999px',
+                        background: 'rgba(16,185,129,0.2)',
+                        border: '1px solid rgba(16,185,129,0.4)',
+                        color: '#34d399',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <Leaf style={{ width: '12px', height: '12px' }} />
+                      Organic
+                    </span>
+                  )}
+                </div>
+                {/* Location & rating */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.45)', fontSize: '13px' }}>
+                    <MapPinIcon style={{ width: '12px', height: '12px', flexShrink: 0 }} />
+                    {pin.district}, {pin.state}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.45)', fontSize: '13px' }}>
+                    <Star style={{ width: '12px', height: '12px', flexShrink: 0, fill: pin.rating_avg > 0 ? '#fbbf24' : 'none', color: pin.rating_avg > 0 ? '#fbbf24' : 'rgba(255,255,255,0.2)' }} />
+                    {pin.rating_avg > 0 ? pin.rating_avg.toFixed(1) : 'New'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'rgba(255,255,255,0.5)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  marginLeft: '12px',
+                }}
+              >
+                <X style={{ width: '14px', height: '14px' }} />
+              </button>
+            </div>
+
+            {/* Quantity & availability row */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '12px 0',
+                borderTop: '1px solid rgba(255,255,255,0.07)',
+                borderBottom: '1px solid rgba(255,255,255,0.07)',
+                marginBottom: '14px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Scale style={{ width: '14px', height: '14px', color: '#10b981' }} />
+                <span style={{ color: 'white', fontSize: '14px', fontWeight: 600 }}>
+                  {pin.quantity.toLocaleString()} {pin.unit}
+                </span>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px' }}>available</span>
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>
+                Harvest:{' '}
+                <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+                  Ready now
+                </span>
+              </div>
+            </div>
+
+            {/* Price section */}
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: '14px',
+                padding: '14px',
+                marginBottom: '14px',
+              }}
+            >
+              {pin.expected_price ? (
+                <div style={{ marginBottom: mandiData ? '8px' : 0 }}>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                    Farmer&apos;s price
+                  </div>
+                  <div style={{ color: 'white', fontSize: '22px', fontWeight: 700 }}>
+                    ₹{pin.expected_price}
+                    <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', fontWeight: 400 }}>/{pin.unit}</span>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '14px', fontStyle: 'italic' }}>Price not set</div>
+              )}
+
+              {mandiData && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    paddingTop: '8px',
+                    borderTop: pin.expected_price ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>Today&apos;s mandi:</span>
+                  <span style={{ color: '#10b981', fontSize: '13px', fontWeight: 600 }}>
+                    ₹{mandiData.price}/kg · {mandiData.market}
+                  </span>
+                  {pin.expected_price && (
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: priceVsMandi > 0 ? '#10b981' : '#f59e0b',
+                      }}
+                    >
+                      {priceVsMandi > 0 ? '▲' : '▼'} {Math.abs(priceVsMandi)}% {priceVsMandi > 0 ? 'above' : 'below'} mandi
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Contact section */}
+            <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+              {isLoggedIn ? (
+                <>
+                  <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+                    Farmer Contact
+                  </div>
+                  {pin.farmer_name && (
+                    <div style={{ color: 'white', fontSize: '15px', fontWeight: 600 }}>
+                      {pin.farmer_name}
+                      {pin.farmer_village && (
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', fontWeight: 400, marginLeft: '8px' }}>
+                          {pin.farmer_village}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {pin.farmer_phone && (
+                    <a
+                      href={`tel:${pin.farmer_phone}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '14px',
+                        borderRadius: '14px',
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                        boxShadow: '0 4px 16px rgba(16,185,129,0.3)',
+                        color: 'black',
+                        fontWeight: 700,
+                        fontSize: '15px',
+                        textDecoration: 'none',
+                        fontFamily: 'Inter, sans-serif',
+                      }}
+                    >
+                      <Phone style={{ width: '16px', height: '16px' }} />
+                      {pin.farmer_phone}
+                    </a>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px',
+                      borderRadius: '12px',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.07)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '18px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      👨‍🌾
+                    </div>
+                    <div>
+                      <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px' }}>Farmer contact hidden</div>
+                      <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>Login to see name &amp; phone</div>
+                    </div>
+                  </div>
+                  <Link
+                    href="/auth"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '14px',
+                      borderRadius: '14px',
+                      background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.08))',
+                      border: '1px solid rgba(16,185,129,0.3)',
+                      color: '#34d399',
+                      fontWeight: 700,
+                      fontSize: '15px',
+                      textDecoration: 'none',
+                      fontFamily: 'Inter, sans-serif',
+                    }}
+                  >
+                    <Lock style={{ width: '14px', height: '14px' }} />
+                    Login to contact farmer
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* No pin — show hint row */}
+        {!pin && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '4px 20px 16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span
-                className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"
-                style={{ boxShadow: '0 0 6px #10b981' }}
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#10b981',
+                  boxShadow: '0 0 6px #10b981',
+                  flexShrink: 0,
+                  display: 'inline-block',
+                }}
               />
-              <span className="text-white/60 text-sm font-medium">
+              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', fontFamily: 'Inter, sans-serif' }}>
                 {totalPins} live crops on map
               </span>
             </div>
-            <button
-              onClick={() => setSheetState('open')}
-              className="flex items-center gap-1.5 text-emerald-400 text-sm font-semibold"
-            >
-              <ChevronUp className="w-4 h-4" />
-              Browse all
-            </button>
-          </div>
-        ) : (
-          <MobileSheetContent
-            pin={pin}
-            isLoggedIn={isLoggedIn}
-            mandiPrice={mandiPrice}
-            priceVsMandi={priceVsMandi}
-            onClose={onClose}
-          />
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-interface CardContentProps {
-  pin: MapPin
-  config: CategoryConfig
-  isLoggedIn: boolean
-  mandiPrice: number
-  priceVsMandi: number
-  onClose: () => void
-}
-
-interface MobileContentProps {
-  pin: MapPin
-  isLoggedIn: boolean
-  mandiPrice: number
-  priceVsMandi: number
-  onClose: () => void
-}
-
-function DesktopCardContent({ pin, config, isLoggedIn, mandiPrice, priceVsMandi, onClose }: CardContentProps) {
-  return (
-    <>
-      {/* Image / Hero */}
-      <div className="relative h-32 overflow-hidden" style={{ background: `${config.mapColor}15` }}>
-        {pin.images.length > 0 ? (
-          <img src={pin.images[0]} alt={pin.crop_name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-5xl">{config.emoji}</span>
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-        <div className="absolute top-3 left-3 flex gap-2">
-          <span
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-white"
-            style={{ background: `${config.mapColor}cc` }}
-          >
-            {config.emoji} {config.label}
-          </span>
-          {pin.is_organic && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/90 text-white">
-              <Leaf className="w-3 h-3" /> Organic
-            </span>
-          )}
-        </div>
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      <div className="p-4 space-y-3">
-        <div>
-          <h3 className="text-white font-bold text-lg leading-tight">{pin.crop_name}</h3>
-          <div className="flex items-center gap-1.5 mt-1 text-white/45 text-xs">
-            <MapPinIcon className="w-3 h-3 flex-shrink-0" />
-            <span>{pin.district}, {pin.state}</span>
-          </div>
-        </div>
-        <CropStats pin={pin} mandiPrice={mandiPrice} priceVsMandi={priceVsMandi} />
-        <div className="h-px bg-white/8" />
-        <ContactSection pin={pin} isLoggedIn={isLoggedIn} />
       </div>
     </>
-  )
-}
-
-function MobileSheetContent({ pin, isLoggedIn, mandiPrice, priceVsMandi, onClose }: MobileContentProps) {
-  const config = CATEGORY_CONFIG[pin.crop_category]
-  return (
-    <div className="px-4 pb-4 space-y-3">
-      <div className="flex items-start gap-3">
-        <div
-          className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 text-3xl overflow-hidden"
-          style={{ background: `${config.mapColor}15`, border: `1px solid ${config.mapColor}30` }}
-        >
-          {pin.images.length > 0
-            ? <img src={pin.images[0]} alt={pin.crop_name} className="w-full h-full object-cover" />
-            : <span>{config.emoji}</span>
-          }
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold text-white"
-              style={{ background: `${config.mapColor}cc` }}
-            >
-              {config.emoji} {config.label}
-            </span>
-            {pin.is_organic && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/90 text-white">
-                <Leaf className="w-3 h-3" /> Organic
-              </span>
-            )}
-          </div>
-          <h3 className="text-white font-bold text-lg leading-tight mt-1">{pin.crop_name}</h3>
-          <div className="flex items-center gap-1 text-white/45 text-xs mt-0.5">
-            <MapPinIcon className="w-3 h-3 flex-shrink-0" />
-            <span>{pin.district}, {pin.state}</span>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition flex-shrink-0"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      <CropStats pin={pin} mandiPrice={mandiPrice} priceVsMandi={priceVsMandi} />
-      <div className="h-px bg-white/8" />
-      <ContactSection pin={pin} isLoggedIn={isLoggedIn} />
-    </div>
-  )
-}
-
-function CropStats({ pin, mandiPrice, priceVsMandi }: { pin: MapPin; mandiPrice: number; priceVsMandi: number }) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1.5">
-          <Scale className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="text-white font-semibold text-sm">{pin.quantity.toLocaleString()}</span>
-          <span className="text-white/40 text-xs">{pin.unit}</span>
-        </div>
-        {pin.expected_price && (
-          <div className="flex items-center gap-1">
-            <span className="text-white font-semibold text-sm">₹{pin.expected_price}/{pin.unit}</span>
-          </div>
-        )}
-        {pin.rating_avg > 0 && (
-          <div className="flex items-center gap-1 ml-auto">
-            {[1, 2, 3, 4, 5].map(s => (
-              <Star
-                key={s}
-                className={`w-3 h-3 ${s <= Math.round(pin.rating_avg) ? 'fill-amber-400 text-amber-400' : 'text-white/15'}`}
-              />
-            ))}
-            <span className="text-white/50 text-xs ml-0.5">{pin.rating_avg.toFixed(1)}</span>
-          </div>
-        )}
-      </div>
-
-      {mandiPrice > 0 && (
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-white/40">Today&apos;s mandi:</span>
-          <span className="text-emerald-400 font-medium">₹{mandiPrice}/kg</span>
-          {pin.expected_price && (
-            <span className={`font-semibold ${priceVsMandi > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              ({priceVsMandi > 0 ? '+' : ''}{priceVsMandi}% vs mandi)
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ContactSection({ pin, isLoggedIn }: { pin: MapPin; isLoggedIn: boolean }) {
-  if (isLoggedIn) {
-    return (
-      <div className="space-y-2">
-        <p className="text-white/35 text-[10px] uppercase tracking-widest font-semibold">Farmer Contact</p>
-        <p className="text-white font-semibold text-sm">{pin.farmer_name || 'Farmer'}</p>
-        {pin.farmer_village && (
-          <p className="text-white/40 text-xs">{pin.farmer_village}</p>
-        )}
-        {pin.farmer_phone && (
-          <a
-            href={`tel:${pin.farmer_phone}`}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-bold text-black transition-all duration-150 active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 16px rgba(16,185,129,0.3)' }}
-          >
-            <Phone className="w-4 h-4" strokeWidth={2.5} />
-            {pin.farmer_phone}
-          </a>
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/4 border border-white/8">
-        <div className="w-8 h-8 rounded-full bg-white/8 flex items-center justify-center flex-shrink-0">
-          <span className="text-base">👨‍🌾</span>
-        </div>
-        <div>
-          <p className="text-white/60 text-xs">Farmer contact hidden</p>
-          <p className="text-white/30 text-[11px]">Login to see name &amp; phone</p>
-        </div>
-      </div>
-      <Link
-        href="/auth"
-        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-bold transition-all duration-150 active:scale-95"
-        style={{
-          background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.08))',
-          border: '1px solid rgba(16,185,129,0.3)',
-          color: '#34d399',
-        }}
-      >
-        <Lock className="w-3.5 h-3.5" strokeWidth={2.5} />
-        Login to contact farmer
-      </Link>
-    </div>
   )
 }

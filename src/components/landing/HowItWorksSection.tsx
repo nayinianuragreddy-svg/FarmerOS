@@ -1,45 +1,47 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
+
+function useScrollReveal(threshold = 0.1) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true) }, { threshold })
+    if (ref.current) obs.observe(ref.current)
+    return () => obs.disconnect()
+  }, [threshold])
+  return { ref, visible }
+}
 
 const STEPS = [
   {
     number: '01',
-    icon: '🌾',
-    title: 'List in 3 minutes',
-    act: 'ACT 1: FARMER',
-    text: 'Farmer opens FarmerOS. Uploads crop photo. GPS auto-tags the farm. Crop goes live on the map instantly.',
+    emoji: '👨‍🌾',
+    title: 'List your crop',
+    description:
+      'Open FarmerOS. Upload a photo, select your crop, GPS auto-tags your farm. Goes live on the map in under 3 minutes.',
+    footer: 'Takes 3 minutes',
   },
   {
     number: '02',
-    icon: '🔍',
-    title: 'Buyers discover nearby',
-    act: 'ACT 2: DISCOVERY',
-    text: "Buyer searches 'tomatoes near me.' The map shows farms within their radius. Prices visible. Organic badges marked.",
+    emoji: '🔍',
+    title: 'Find crops near you',
+    description:
+      'Search by crop type, district, or radius. The map shows every available crop within kilometres of you — with prices and organic status.',
+    footer: 'Works from any phone',
   },
   {
     number: '03',
-    icon: '📞',
-    title: 'Direct connection. Full price.',
-    act: 'ACT 3: CONNECTION',
-    text: 'They connect directly. No broker. No commission. The farmer gets the full price. The buyer gets farm-fresh quality.',
+    emoji: '📞',
+    title: 'Talk directly',
+    description:
+      'One tap to call the farmer. No broker, no commission, no intermediary. Farmer gets the full price. Every time.',
+    footer: 'Zero middlemen',
   },
 ]
 
 export default function HowItWorksSection() {
-  const ref = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true) },
-      { threshold: 0.1 }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+  const { ref, visible } = useScrollReveal(0.1)
 
   return (
     <section
@@ -50,33 +52,20 @@ export default function HowItWorksSection() {
     >
       <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ marginBottom: '64px' }}>
-          <div
-            style={{
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.14em',
-              color: '#D4841A',
-              textTransform: 'uppercase',
-              marginBottom: '16px',
-            }}
-          >
-            How it works
-          </div>
-          <h2
-            style={{
-              fontSize: 'clamp(36px, 4vw, 52px)',
-              fontWeight: 800,
-              letterSpacing: '-0.04em',
-              lineHeight: 1.0,
-              color: '#0A0F0A',
-            }}
-          >
-            Three steps.
-            <br />
-            No middlemen.
-          </h2>
-        </div>
+        <h2
+          style={{
+            fontSize: 'clamp(32px, 5vw, 56px)',
+            fontWeight: 800,
+            letterSpacing: '-0.04em',
+            lineHeight: 1.0,
+            color: '#0A0F0A',
+            textAlign: 'center',
+            marginBottom: '64px',
+            fontFamily: "'Inter', -apple-system, sans-serif",
+          }}
+        >
+          How it works
+        </h2>
 
         {/* Cards */}
         <div
@@ -91,65 +80,82 @@ export default function HowItWorksSection() {
             <div
               key={i}
               style={{
-                background: '#1A1A0F',
-                border: '1px solid rgba(212,132,26,0.15)',
-                borderRadius: '16px',
-                padding: '40px 32px',
+                background: '#FFFFFF',
+                border: '1px solid #E5E0D8',
+                borderRadius: '20px',
+                padding: '32px',
+                boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
                 opacity: visible ? 1 : 0,
-                transform: visible ? 'translateY(0)' : 'translateY(30px)',
-                transition: `opacity 0.6s ease ${i * 0.15}s, transform 0.6s ease ${i * 0.15}s`,
+                transform: visible ? 'none' : 'translateY(30px)',
+                transition: `opacity 0.6s ease ${i * 0.12}s, transform 0.6s ease ${i * 0.12}s`,
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
-              {/* Act label */}
+              {/* Number badge */}
               <div
                 style={{
-                  fontSize: '10px',
+                  fontSize: '13px',
                   fontWeight: 700,
-                  letterSpacing: '0.12em',
-                  color: 'rgba(212,132,26,0.6)',
-                  marginBottom: '24px',
+                  color: '#00C97A',
                   fontFamily: 'JetBrains Mono, Courier New, monospace',
-                }}
-              >
-                {step.act}
-              </div>
-
-              {/* Number */}
-              <div
-                style={{
-                  fontSize: '48px',
-                  fontWeight: 700,
-                  fontFamily: 'JetBrains Mono, Courier New, monospace',
-                  color: '#D4841A',
-                  lineHeight: 1,
-                  letterSpacing: '-0.04em',
-                  marginBottom: '16px',
+                  letterSpacing: '0.08em',
+                  marginBottom: '20px',
                 }}
               >
                 {step.number}
               </div>
 
-              {/* Icon */}
-              <div style={{ fontSize: '40px', marginBottom: '20px' }}>{step.icon}</div>
+              {/* Emoji */}
+              <div style={{ fontSize: '44px', marginBottom: '20px', lineHeight: 1 }}>
+                {step.emoji}
+              </div>
 
               {/* Title */}
               <h3
                 style={{
-                  fontSize: '22px',
+                  fontSize: '24px',
                   fontWeight: 700,
+                  color: '#0A0F0A',
                   letterSpacing: '-0.02em',
-                  color: '#FFFFFF',
-                  marginBottom: '16px',
+                  marginBottom: '12px',
                   lineHeight: 1.2,
                 }}
               >
                 {step.title}
               </h3>
 
-              {/* Text */}
-              <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.65 }}>
-                {step.text}
+              {/* Description */}
+              <p
+                style={{
+                  fontSize: '15px',
+                  color: 'rgba(10,15,10,0.6)',
+                  lineHeight: 1.65,
+                  flex: 1,
+                  marginBottom: '24px',
+                }}
+              >
+                {step.description}
               </p>
+
+              {/* Footer tag */}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: '#00C97A',
+                  background: 'rgba(0,201,122,0.08)',
+                  border: '1px solid rgba(0,201,122,0.2)',
+                  borderRadius: '100px',
+                  padding: '5px 12px',
+                  width: 'fit-content',
+                }}
+              >
+                ✓ {step.footer}
+              </div>
             </div>
           ))}
         </div>

@@ -1,12 +1,13 @@
 'use client'
 
 import { useRef } from 'react'
+import type { CSSProperties } from 'react'
 import { CATEGORY_CONFIG } from '@/lib/constants'
 import { CropCategory } from '@/lib/types'
 
 interface CategoryPillsBarProps {
-  activeCategories: CropCategory[]
-  onCategoryChange: (cats: CropCategory[]) => void
+  activeCategory: CropCategory | null
+  onCategoryChange: (cat: CropCategory | null) => void
   organicOnly: boolean
   onOrganicToggle: () => void
   totalPins?: number
@@ -15,7 +16,7 @@ interface CategoryPillsBarProps {
 const ALL_CATEGORIES = Object.keys(CATEGORY_CONFIG) as CropCategory[]
 
 export default function CategoryPillsBar({
-  activeCategories,
+  activeCategory,
   onCategoryChange,
   organicOnly,
   onOrganicToggle,
@@ -23,23 +24,13 @@ export default function CategoryPillsBar({
 }: CategoryPillsBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const isAllActive = activeCategories.length === 0
-
-  const toggleCategory = (cat: CropCategory) => {
-    if (activeCategories.includes(cat)) {
-      onCategoryChange(activeCategories.filter(c => c !== cat))
-    } else {
-      onCategoryChange([...activeCategories, cat])
-    }
-  }
-
-  const clearAll = () => onCategoryChange([])
+  const isAllActive = activeCategory === null
 
   return (
     <div
       style={{
-        height: '52px',
-        background: 'rgba(6,9,14,0.92)',
+        height: '56px',
+        background: 'rgba(7,12,10,0.95)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
@@ -58,33 +49,37 @@ export default function CategoryPillsBar({
           paddingRight: '16px',
           height: '100%',
           overflowX: 'auto',
+          overflowY: 'hidden',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
-        }}
+        } as CSSProperties}
         className="no-scrollbar"
       >
-        {/* All Crops pill */}
+        {/* All pill */}
         <button
-          onClick={clearAll}
+          onClick={() => onCategoryChange(null)}
           style={{
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            padding: '6px 14px',
-            borderRadius: '20px',
-            border: `1px solid ${isAllActive ? 'rgba(0,201,122,0.5)' : 'rgba(255,255,255,0.1)'}`,
-            background: isAllActive ? 'rgba(0,201,122,0.15)' : 'rgba(255,255,255,0.05)',
+            padding: '8px 16px',
+            borderRadius: '9999px',
+            border: isAllActive
+              ? '1px solid rgba(16,185,129,0.7)'
+              : '1px solid rgba(255,255,255,0.12)',
+            background: isAllActive ? '#10b981' : 'transparent',
             color: isAllActive ? 'white' : 'rgba(255,255,255,0.5)',
             fontSize: '13px',
             fontWeight: 600,
             cursor: 'pointer',
-            transition: 'all 0.15s ease',
+            transition: 'all 0.12s ease',
             whiteSpace: 'nowrap',
+            fontFamily: 'Inter, sans-serif',
           }}
         >
-          <span style={{ fontSize: '14px' }}>🗺️</span>
-          <span>All Crops</span>
+          <span style={{ fontSize: '14px' }}>🌾</span>
+          <span>All</span>
           {totalPins > 0 && (
             <span
               style={{
@@ -92,14 +87,48 @@ export default function CategoryPillsBar({
                 fontWeight: 700,
                 padding: '1px 6px',
                 borderRadius: '10px',
-                background: isAllActive ? 'rgba(0,201,122,0.25)' : 'rgba(255,255,255,0.08)',
-                color: isAllActive ? '#00C97A' : 'rgba(255,255,255,0.4)',
+                background: isAllActive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)',
+                color: isAllActive ? 'white' : 'rgba(255,255,255,0.4)',
               }}
             >
               {totalPins}
             </span>
           )}
         </button>
+
+        {/* Category pills */}
+        {ALL_CATEGORIES.map(cat => {
+          const config = CATEGORY_CONFIG[cat]
+          const isActive = activeCategory === cat
+          return (
+            <button
+              key={cat}
+              onClick={() => onCategoryChange(isActive ? null : cat)}
+              style={{
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '8px 16px',
+                borderRadius: '9999px',
+                border: isActive
+                  ? `1px solid ${config.mapColor}`
+                  : '1px solid rgba(255,255,255,0.12)',
+                background: isActive ? config.mapColor : 'transparent',
+                color: isActive ? 'white' : 'rgba(255,255,255,0.5)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.12s ease',
+                whiteSpace: 'nowrap',
+                fontFamily: 'Inter, sans-serif',
+              }}
+            >
+              <span style={{ fontSize: '14px' }}>{config.emoji}</span>
+              <span>{config.label}</span>
+            </button>
+          )
+        })}
 
         {/* Divider */}
         <div
@@ -111,48 +140,7 @@ export default function CategoryPillsBar({
           }}
         />
 
-        {/* Category pills */}
-        {ALL_CATEGORIES.map(cat => {
-          const config = CATEGORY_CONFIG[cat]
-          const isActive = activeCategories.includes(cat)
-          return (
-            <button
-              key={cat}
-              onClick={() => toggleCategory(cat)}
-              style={{
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 14px',
-                borderRadius: '20px',
-                border: `1px solid ${isActive ? `${config.mapColor}50` : 'rgba(255,255,255,0.1)'}`,
-                background: isActive ? `${config.mapColor}25` : 'rgba(255,255,255,0.05)',
-                color: isActive ? 'white' : 'rgba(255,255,255,0.5)',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <span style={{ fontSize: '14px' }}>{config.emoji}</span>
-              <span>{config.label}</span>
-            </button>
-          )
-        })}
-
-        {/* Divider before organic */}
-        <div
-          style={{
-            width: '1px',
-            height: '24px',
-            background: 'rgba(255,255,255,0.1)',
-            flexShrink: 0,
-          }}
-        />
-
-        {/* Organic toggle — always visible at the right */}
+        {/* Organic toggle */}
         <button
           onClick={onOrganicToggle}
           style={{
@@ -160,16 +148,19 @@ export default function CategoryPillsBar({
             display: 'flex',
             alignItems: 'center',
             gap: '5px',
-            padding: '6px 14px',
-            borderRadius: '20px',
-            border: `1px solid ${organicOnly ? 'rgba(16,185,129,0.5)' : 'rgba(255,255,255,0.1)'}`,
-            background: organicOnly ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)',
-            color: organicOnly ? '#34d399' : 'rgba(255,255,255,0.5)',
+            padding: '8px 16px',
+            borderRadius: '9999px',
+            border: organicOnly
+              ? '1px solid #10b981'
+              : '1px solid rgba(255,255,255,0.12)',
+            background: organicOnly ? '#10b981' : 'transparent',
+            color: organicOnly ? 'white' : 'rgba(255,255,255,0.5)',
             fontSize: '13px',
             fontWeight: 600,
             cursor: 'pointer',
-            transition: 'all 0.15s ease',
+            transition: 'all 0.12s ease',
             whiteSpace: 'nowrap',
+            fontFamily: 'Inter, sans-serif',
           }}
         >
           <span style={{ fontSize: '14px' }}>🌿</span>
@@ -177,7 +168,6 @@ export default function CategoryPillsBar({
         </button>
       </div>
 
-      {/* Hide scrollbar for webkit */}
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>

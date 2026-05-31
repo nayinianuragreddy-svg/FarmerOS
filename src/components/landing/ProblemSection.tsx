@@ -1,63 +1,61 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 
-export default function ProblemSection() {
+function useScrollReveal(threshold = 0.1) {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
-
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setVisible(true) },
-      { threshold: 0.15 }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVisible(true) }, { threshold })
+    if (ref.current) obs.observe(ref.current)
+    return () => obs.disconnect()
+  }, [threshold])
+  return { ref, visible }
+}
+
+export default function ProblemSection() {
+  const { ref, visible } = useScrollReveal(0.12)
 
   return (
     <section
-      ref={ref}
       style={{
-        background: '#030508',
-        padding: '120px 24px',
+        background: '#070C0A',
+        padding: '140px 24px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
       }}
     >
       <div
+        ref={ref}
         style={{
-          maxWidth: '640px',
+          maxWidth: '800px',
+          width: '100%',
           textAlign: 'center',
           opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0)' : 'translateY(40px)',
-          transition: 'opacity 0.9s ease, transform 0.9s ease',
+          transform: visible ? 'none' : 'translateY(32px)',
+          transition: 'opacity 0.6s ease, transform 0.6s ease',
         }}
       >
-        {/* Big number */}
+        {/* Hero number */}
         <div
           style={{
-            fontSize: 'clamp(80px, 12vw, 120px)',
-            fontWeight: 700,
-            fontFamily: 'JetBrains Mono, Courier New, monospace',
+            fontSize: 'clamp(100px, 15vw, 160px)',
+            fontWeight: 900,
             color: '#FFFFFF',
+            letterSpacing: '-0.05em',
             lineHeight: 1,
-            letterSpacing: '-0.04em',
           }}
         >
-          33 paise.
+          33¢
         </div>
 
         <div
           style={{
-            fontSize: '32px',
-            fontWeight: 700,
-            color: '#FFFFFF',
-            marginTop: '32px',
+            fontSize: '28px',
+            color: 'rgba(255,255,255,0.7)',
+            fontWeight: 600,
+            marginTop: '8px',
             letterSpacing: '-0.02em',
           }}
         >
@@ -67,43 +65,60 @@ export default function ProblemSection() {
         <div
           style={{
             fontSize: '20px',
-            color: 'rgba(255,255,255,0.6)',
-            marginTop: '16px',
-            lineHeight: 1.6,
+            color: 'rgba(255,255,255,0.4)',
+            marginTop: '12px',
           }}
         >
-          Of every rupee you spend on vegetables.
+          Of every rupee you pay for vegetables.
         </div>
 
         <div style={{ height: '32px' }} />
 
-        <div style={{ fontSize: '20px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6 }}>
-          The other 67 paise?
+        <div style={{ fontSize: '22px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
+          The other 67¢ disappears into a chain of middlemen,
         </div>
-        <div style={{ fontSize: '20px', color: 'rgba(255,255,255,0.5)', marginTop: '8px', lineHeight: 1.6 }}>
-          Gone. Into a chain of middlemen, commission agents, and traders.
+        <div style={{ fontSize: '22px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
+          commission agents, and traders.
         </div>
 
-        <div style={{ height: '48px' }} />
+        <div style={{ height: '40px' }} />
+
+        {/* Thin line */}
+        <div
+          style={{
+            width: '60px',
+            height: '1px',
+            background: 'rgba(255,255,255,0.15)',
+            margin: '0 auto',
+          }}
+        />
+
+        <div style={{ height: '40px' }} />
 
         <div
           style={{
-            fontSize: '18px',
-            color: 'rgba(255,255,255,0.4)',
-            fontStyle: 'italic',
-            lineHeight: 1.65,
+            fontSize: '26px',
+            color: 'rgba(255,255,255,0.7)',
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
           }}
         >
-          ₹300 billion market. 146 million farmers. Zero direct connections.
+          ₹300 billion market. 146 million farmers.
         </div>
 
-        <div style={{ height: '64px' }} />
+        <div style={{ height: '24px' }} />
+
+        <div style={{ fontSize: '22px', color: 'rgba(255,255,255,0.4)' }}>
+          For 70 years, they had no map.
+        </div>
+
+        <div style={{ height: '32px' }} />
 
         <div
           style={{
-            fontSize: 'clamp(36px, 5vw, 48px)',
-            fontWeight: 700,
+            fontSize: '36px',
             color: '#00C97A',
+            fontWeight: 800,
             letterSpacing: '-0.03em',
           }}
         >

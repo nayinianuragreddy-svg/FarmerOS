@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useAuthStore } from '@/store/authStore'
 import { CATEGORY_CONFIG, CROP_TAXONOMY, QUANTITY_UNITS, INDIAN_STATES } from '@/lib/constants'
+import { lookupPincode } from '@/lib/api'
 import { CropCategory } from '@/lib/types'
 import PageLayout from '@/components/ui/PageLayout'
 import {
@@ -23,12 +24,6 @@ export default function ListPage() {
   const router = useRouter()
   const { user, activeRole, farmerProfile, addListing } = useAuthStore()
 
-  // Auth guard
-  useEffect(() => {
-    if (!user) router.replace('/auth')
-    else if (activeRole !== 'farmer') router.replace('/')
-  }, [user, activeRole, router])
-
   const [category, setCategory] = useState<CropCategory | null>(null)
   const [cropSearch, setCropSearch] = useState('')
   const [cropName, setCropName] = useState('')
@@ -39,11 +34,37 @@ export default function ListPage() {
   const [organic, setOrganic] = useState<OrganicStatus>('no')
   const [images, setImages] = useState<string[]>([])
   const [geoTag, setGeoTag] = useState<{ lat: number; lng: number } | null>(null)
+  const [pincode, setPincode] = useState('')
+  const [pincodeLoading, setPincodeLoading] = useState(false)
   const [harvestDate, setHarvestDate] = useState('')
   const [notes, setNotes] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+
+  // Auth guard
+  useEffect(() => {
+    if (!user) router.replace('/auth')
+    else if (activeRole !== 'farmer') router.replace('/')
+  }, [user, activeRole, router])
+
+  // Auto-geocode when a valid 6-digit pincode is entered
+  useEffect(() => {
+    if (!/^\d{6}$/.test(pincode)) return
+    setPincodeLoading(true)
+    lookupPincode(pincode).then(result => {
+      if (result && !geoTag) {
+        // Try to geocode the district to auto-set the map
+        import('@/lib/api').then(({ geocodeLocation }) => {
+          geocodeLocation(`${result.district}, ${result.state}`).then(geo => {
+            if (geo) setGeoTag({ lat: geo.lat, lng: geo.lng })
+          })
+        })
+      }
+      setPincodeLoading(false)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pincode])
 
   const suggestions = category && cropSearch.length > 0
     ? CROP_TAXONOMY[category].filter(c => c.toLowerCase().includes(cropSearch.toLowerCase()))
@@ -342,6 +363,25 @@ export default function ListPage() {
             <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center justify-center">4</div>
             <h2 className="text-white font-bold">Farm Location *</h2>
             <span className="text-white/30 text-xs ml-1">tap map or use GPS</span>
+          </div>
+
+          {/* Optional pincode for quick location auto-fill */}
+          <div>
+            <label className="text-white/40 text-xs font-semibold uppercase tracking-wider block mb-1.5">
+              Pincode <span className="text-white/20 normal-case font-normal">(optional — auto-sets map location)</span>
+            </label>
+            <div className="relative">
+              <input
+                value={pincode}
+                onChange={e => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="e.g. 500001"
+                maxLength={6}
+                className={inputCls('pincode')}
+              />
+              {pincodeLoading && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-400 animate-spin" />
+              )}
+            </div>
           </div>
 
           <GeoTagPicker value={geoTag} onChange={c => { setGeoTag(c); setErrors(e => ({ ...e, geoTag: '' })) }} />

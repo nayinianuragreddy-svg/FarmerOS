@@ -1,29 +1,39 @@
 'use client'
 
-const MOCK_PRICES = [
-  { crop: 'Tomato', emoji: '🍅', price: '₹18/kg', change: '+12%', up: true },
-  { crop: 'Onion', emoji: '🧅', price: '₹12/kg', change: '-5%', up: false },
-  { crop: 'Wheat', emoji: '🌾', price: '₹23/kg', change: '+2%', up: true },
-  { crop: 'Chilli (Guntur)', emoji: '🌶️', price: '₹180/kg', change: '+8%', up: true },
-  { crop: 'Groundnut', emoji: '🥜', price: '₹65/kg', change: '+3%', up: true },
-  { crop: 'Turmeric', emoji: '🟡', price: '₹145/kg', change: '-2%', up: false },
-  { crop: 'Cotton', emoji: '☁️', price: '₹7,200/qt', change: '+1%', up: true },
-  { crop: 'Sugarcane', emoji: '🎋', price: '₹350/qt', change: '0%', up: true },
-  { crop: 'Soybean', emoji: '🫘', price: '₹4,300/qt', change: '-3%', up: false },
-  { crop: 'Rice (Basmati)', emoji: '🍚', price: '₹38/kg', change: '+6%', up: true },
-]
+import { useEffect, useState } from 'react'
+import { getPriceTickerData } from '@/lib/api'
 
-// Duplicate for seamless loop
-const TICKER_ITEMS = [...MOCK_PRICES, ...MOCK_PRICES]
+type TickerItem = {
+  crop: string
+  emoji: string
+  price: number
+  unit: string
+  change: number
+}
+
+const FALLBACK = getPriceTickerData()
 
 export default function PriceTicker() {
+  const [items, setItems] = useState<TickerItem[]>(FALLBACK)
+
+  useEffect(() => {
+    fetch('/api/mandi-prices')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setItems(data)
+      })
+      .catch(() => {})
+  }, [])
+
+  // Duplicate for seamless loop
+  const tickerItems = [...items, ...items]
+
   return (
     <div
       style={{
-        background: '#0A0F0A',
-        borderTop: '1px solid rgba(0,201,122,0.1)',
-        borderBottom: '1px solid rgba(0,201,122,0.1)',
-        boxShadow: '0 0 40px rgba(0,201,122,0.04)',
+        background: '#0A1409',
+        borderTop: '1px solid rgba(0,201,122,0.15)',
+        borderBottom: '1px solid rgba(0,201,122,0.15)',
         overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
@@ -31,7 +41,7 @@ export default function PriceTicker() {
         position: 'relative',
       }}
     >
-      {/* Label */}
+      {/* Fixed label */}
       <div
         style={{
           flexShrink: 0,
@@ -44,70 +54,91 @@ export default function PriceTicker() {
           height: '100%',
           display: 'flex',
           alignItems: 'center',
-          background: '#0A0F0A',
+          background: '#0A1409',
           zIndex: 1,
           position: 'relative',
+          whiteSpace: 'nowrap',
+          gap: '6px',
         }}
       >
-        LIVE MANDI
-        <br />
-        PRICES
+        LIVE MANDI PRICES 📊
       </div>
 
-      {/* Scrolling ticker */}
+      {/* Fade edges */}
+      <div
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: '80px',
+          background: 'linear-gradient(to right, transparent, #0A1409)',
+          zIndex: 2,
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Scrolling content */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          animation: 'ticker-scroll 40s linear infinite',
+          animation: 'tickerScroll 40s linear infinite',
           whiteSpace: 'nowrap',
+          willChange: 'transform',
         }}
       >
-        {TICKER_ITEMS.map((item, i) => (
-          <div
-            key={i}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '0 28px',
-              borderRight: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
-            <span style={{ fontSize: '14px' }}>{item.emoji}</span>
-            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '13px', fontWeight: 500 }}>
-              {item.crop}
-            </span>
-            <span
+        {tickerItems.map((item, i) => {
+          const up = item.change > 0
+          const down = item.change < 0
+          return (
+            <div
+              key={i}
               style={{
-                fontFamily: 'JetBrains Mono, Courier New, monospace',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#FFFFFF',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '0 28px',
+                borderRight: '1px solid rgba(255,255,255,0.05)',
               }}
             >
-              {item.price}
-            </span>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                color: item.up ? '#00C97A' : '#FF5252',
-                background: item.up ? 'rgba(0,201,122,0.1)' : 'rgba(255,82,82,0.1)',
-                padding: '2px 6px',
-                borderRadius: '4px',
-              }}
-            >
-              {item.change}
-            </span>
-          </div>
-        ))}
+              <span style={{ fontSize: '14px' }}>{item.emoji}</span>
+              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', fontWeight: 500 }}>
+                {item.crop}
+              </span>
+              <span
+                style={{
+                  fontFamily: 'JetBrains Mono, Courier New, monospace',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#FFFFFF',
+                }}
+              >
+                ₹{item.price}/{item.unit}
+              </span>
+              {item.change !== 0 && (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: up ? '#00C97A' : '#FF5252',
+                    background: up ? 'rgba(0,201,122,0.1)' : 'rgba(255,82,82,0.1)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                  }}
+                >
+                  {up ? '▲' : '▼'}{Math.abs(item.change)}%
+                </span>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       <style>{`
-        @keyframes ticker-scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+        @keyframes tickerScroll {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
         }
       `}</style>
     </div>

@@ -12,7 +12,7 @@ import Footer from '@/components/landing/Footer'
 
 export default function HomePage() {
   return (
-    <main style={{ background: '#0A0F0A' }}>
+    <main style={{ background: '#070C0A' }}>
       <LandingNavbar />
       <HeroSection />
       <PriceTicker />

@@ -12,7 +12,7 @@ import {
   PackageCheck, Clock, Sprout, TrendingUp
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { getMandiPrice, getPriceTickerData } from '@/lib/api'
+import { getMandiPriceSync, getPriceTickerData } from '@/lib/api'
 
 const WeatherWidget = dynamic(() => import('@/components/dashboard/WeatherWidget'), { ssr: false })
 
@@ -89,7 +89,7 @@ export default function FarmerDashboard() {
           ) : (
             <div className="space-y-2">
               {myListings.slice(0, 5).map(listing => {
-                const mandi = getMandiPrice(listing.crop_name)
+                const mandi = getMandiPriceSync(listing.crop_name)
                 const yourPrice = listing.expected_price
                 const diff = yourPrice && mandi ? Math.round(((yourPrice - mandi.price) / mandi.price) * 100) : null
 

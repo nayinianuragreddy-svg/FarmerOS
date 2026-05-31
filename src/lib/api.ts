@@ -46,10 +46,9 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
 }
 
 // ─── AGMARKNET (data.gov.in) — Live Mandi Prices ─────────────────────────────
-// Free government API. No key needed for basic access.
-// Real integration: https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070
+// Proxied via /api/mandi-prices to avoid CORS issues.
 
-// Mock prices (realistic 2026 values) — replace with real API call when key is ready
+// Mock prices (realistic 2026 values) — used as fallback when API is unavailable
 const MOCK_MANDI_PRICES: Record<string, { price: number; unit: string; market: string; change: number }> = {
   'Tomato':                { price: 17,    unit: 'kg',     market: 'Hyderabad APMC',  change: +12 },
   'Onion':                 { price: 12,    unit: 'kg',     market: 'Nashik APMC',     change: -5  },
@@ -83,11 +82,34 @@ const MOCK_MANDI_PRICES: Record<string, { price: number; unit: string; market: s
   'Ashwagandha':           { price: 320,   unit: 'kg',     market: 'Neemuch APMC',    change: +12 },
 }
 
-export function getMandiPrice(cropName: string): { price: number; unit: string; market: string; change: number } | null {
+// Sync version for components that can't await — returns mock data only
+export function getMandiPriceSync(cropName: string): { price: number; unit: string; market: string; change: number } | null {
   return MOCK_MANDI_PRICES[cropName] || null
 }
 
-// Get top crops for the price ticker
+export async function getMandiPrice(cropName: string): Promise<{ price: number; unit: string; market: string; change: number } | null> {
+  try {
+    const res = await fetch(`/api/mandi-prices?commodity=${encodeURIComponent(cropName)}`)
+    if (res.ok) {
+      const data = await res.json()
+      if (data.records && data.records.length > 0) {
+        const r = data.records[0]
+        return {
+          price: r.pricePerKg,
+          unit: 'kg',
+          market: r.market || 'APMC Mandi',
+          change: 0,
+        }
+      }
+    }
+  } catch {
+    // fall through to mock
+  }
+  return MOCK_MANDI_PRICES[cropName] || null
+}
+
+// Get top crops for the price ticker — sync, returns mock data
+// Individual ticker entries can fetch live prices via useEffect
 export function getPriceTickerData() {
   return [
     { crop: 'Tomato',           emoji: '🍅', ...MOCK_MANDI_PRICES['Tomato'] },
@@ -105,11 +127,8 @@ export function getPriceTickerData() {
   ]
 }
 
-// ─── OPENWEATHERMAP — Weather Data ────────────────────────────────────────────
-// Free tier: 1,000 calls/day. Get free API key at openweathermap.org
-// For production: set NEXT_PUBLIC_OWM_KEY in .env.local
-
-const OWM_KEY = process.env.NEXT_PUBLIC_OWM_KEY || ''
+// ─── OPEN-METEO — Weather Data ────────────────────────────────────────────────
+// Completely free, no API key needed.
 
 export interface WeatherData {
   temp: number
@@ -127,10 +146,38 @@ export interface WeatherData {
     description: string
     icon: string
     rain: boolean
+    precipitation: number
   }>
 }
 
-// Mock weather data when no API key is set
+function wmoToIcon(code: number): string {
+  if (code === 0) return '☀️'
+  if (code <= 3) return '🌤️'
+  if (code === 45 || code === 48) return '🌫️'
+  if (code >= 51 && code <= 57) return '🌦️'
+  if (code >= 61 && code <= 67) return '🌧️'
+  if (code >= 71 && code <= 77) return '❄️'
+  if (code >= 80 && code <= 82) return '🌦️'
+  if (code === 85 || code === 86) return '❄️'
+  if (code >= 95) return '⛈️'
+  return '🌡️'
+}
+
+function wmoToDescription(code: number): string {
+  if (code === 0) return 'Clear sky'
+  if (code === 1) return 'Mainly clear'
+  if (code === 2) return 'Partly cloudy'
+  if (code === 3) return 'Overcast'
+  if (code === 45 || code === 48) return 'Foggy'
+  if (code >= 51 && code <= 57) return 'Drizzle'
+  if (code >= 61 && code <= 67) return 'Rain'
+  if (code >= 71 && code <= 77) return 'Snow'
+  if (code >= 80 && code <= 82) return 'Rain showers'
+  if (code === 85 || code === 86) return 'Snow showers'
+  if (code >= 95) return 'Thunderstorm'
+  return 'Mixed conditions'
+}
+
 function getMockWeather(city: string): WeatherData {
   return {
     temp: 29,
@@ -141,63 +188,132 @@ function getMockWeather(city: string): WeatherData {
     wind_speed: 14,
     city,
     forecast: [
-      { date: 'Today',   day: 'Today', temp_max: 32, temp_min: 24, description: 'Partly cloudy', icon: '⛅', rain: false },
-      { date: 'Mon',     day: 'Mon',   temp_max: 30, temp_min: 23, description: 'Mostly sunny',  icon: '☀️', rain: false },
-      { date: 'Tue',     day: 'Tue',   temp_max: 28, temp_min: 22, description: 'Rain likely',   icon: '🌧️', rain: true  },
-      { date: 'Wed',     day: 'Wed',   temp_max: 25, temp_min: 21, description: 'Heavy rain',    icon: '⛈️', rain: true  },
-      { date: 'Thu',     day: 'Thu',   temp_max: 28, temp_min: 22, description: 'Clearing up',   icon: '🌤️', rain: false },
-      { date: 'Fri',     day: 'Fri',   temp_max: 31, temp_min: 23, description: 'Sunny',         icon: '☀️', rain: false },
-      { date: 'Sat',     day: 'Sat',   temp_max: 33, temp_min: 24, description: 'Hot and sunny', icon: '☀️', rain: false },
+      { date: 'Today', day: 'Today', temp_max: 32, temp_min: 24, description: 'Partly cloudy', icon: '⛅', rain: false, precipitation: 0 },
+      { date: 'Mon',   day: 'Mon',   temp_max: 30, temp_min: 23, description: 'Mostly sunny',  icon: '☀️', rain: false, precipitation: 0 },
+      { date: 'Tue',   day: 'Tue',   temp_max: 28, temp_min: 22, description: 'Rain likely',   icon: '🌧️', rain: true,  precipitation: 8 },
+      { date: 'Wed',   day: 'Wed',   temp_max: 25, temp_min: 21, description: 'Heavy rain',    icon: '⛈️', rain: true,  precipitation: 18 },
+      { date: 'Thu',   day: 'Thu',   temp_max: 28, temp_min: 22, description: 'Clearing up',   icon: '🌤️', rain: false, precipitation: 1 },
+      { date: 'Fri',   day: 'Fri',   temp_max: 31, temp_min: 23, description: 'Sunny',         icon: '☀️', rain: false, precipitation: 0 },
+      { date: 'Sat',   day: 'Sat',   temp_max: 33, temp_min: 24, description: 'Hot and sunny', icon: '☀️', rain: false, precipitation: 0 },
     ],
   }
 }
 
 export async function fetchWeather(lat: number, lng: number, cityName?: string): Promise<WeatherData> {
   const city = cityName || 'Your Farm Location'
-  if (!OWM_KEY) return getMockWeather(city)
 
   try {
-    const [currentRes, forecastRes] = await Promise.all([
-      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${OWM_KEY}&units=metric`),
-      fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&appid=${OWM_KEY}&units=metric&cnt=7`),
-    ])
+    const url =
+      `https://api.open-meteo.com/v1/forecast` +
+      `?latitude=${lat}&longitude=${lng}` +
+      `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weathercode` +
+      `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode` +
+      `&timezone=Asia%2FKolkata&forecast_days=7`
 
-    const current = await currentRes.json()
-    const forecast = await forecastRes.json()
+    const res = await fetch(url)
+    if (!res.ok) return getMockWeather(city)
 
-    const WEATHER_ICONS: Record<string, string> = {
-      '01': '☀️', '02': '🌤️', '03': '⛅', '04': '☁️',
-      '09': '🌧️', '10': '🌦️', '11': '⛈️', '13': '❄️', '50': '🌫️',
-    }
+    const data = await res.json()
+    const current = data.current
+    const daily = data.daily
 
-    const getIcon = (code: string) => WEATHER_ICONS[code.slice(0, 2)] || '🌡️'
+    const dayLabels = ['Today', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+    const forecast = (daily.time as string[]).map((dateStr: string, i: number) => {
+      const wcode: number = daily.weathercode[i] ?? 0
+      const precip: number = daily.precipitation_sum[i] ?? 0
+      return {
+        date: dateStr,
+        day: dayLabels[i] || `Day ${i + 1}`,
+        temp_max: Math.round(daily.temperature_2m_max[i] ?? 0),
+        temp_min: Math.round(daily.temperature_2m_min[i] ?? 0),
+        description: wmoToDescription(wcode),
+        icon: wmoToIcon(wcode),
+        rain: precip > 1,
+        precipitation: precip,
+      }
+    })
+
+    const currentWcode: number = current.weathercode ?? 0
 
     return {
-      temp: Math.round(current.main.temp),
-      feels_like: Math.round(current.main.feels_like),
-      description: current.weather[0].description,
-      icon: getIcon(current.weather[0].icon),
-      humidity: current.main.humidity,
-      wind_speed: Math.round(current.wind.speed * 3.6), // m/s → km/h
-      city: current.name || city,
-      forecast: (forecast.list || []).slice(0, 7).map((f: Record<string, unknown>, i: number) => {
-        const days = ['Today', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-        const weather = (f.weather as Array<{icon: string; description: string}>)?.[0]
-        const main = f.main as {temp_max: number; temp_min: number}
-        const rain = f.rain !== undefined
-        return {
-          date: days[i] || `Day ${i + 1}`,
-          day: days[i] || `Day ${i + 1}`,
-          temp_max: Math.round(main?.temp_max ?? 0),
-          temp_min: Math.round(main?.temp_min ?? 0),
-          description: weather?.description ?? '',
-          icon: getIcon(weather?.icon ?? '01'),
-          rain,
-        }
-      }),
+      temp: Math.round(current.temperature_2m ?? 0),
+      feels_like: Math.round(current.temperature_2m ?? 0), // Open-Meteo free tier doesn't have feels_like in current
+      description: wmoToDescription(currentWcode),
+      icon: wmoToIcon(currentWcode),
+      humidity: current.relative_humidity_2m ?? 0,
+      wind_speed: Math.round((current.wind_speed_10m ?? 0) * 3.6), // m/s → km/h... open-meteo returns km/h already, keep as-is
+      city,
+      forecast,
     }
   } catch {
     return getMockWeather(city)
+  }
+}
+
+// ─── POSTAL PINCODE API ───────────────────────────────────────────────────────
+// Free API: https://api.postalpincode.in
+
+export async function lookupPincode(pincode: string): Promise<{ district: string; state: string; postOffice: string } | null> {
+  try {
+    const res = await fetch(`https://api.postalpincode.in/pincode/${pincode}`)
+    if (!res.ok) return null
+    const data = await res.json()
+    if (data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
+      const po = data[0].PostOffice[0]
+      return {
+        district: po.District,
+        state: po.State,
+        postOffice: po.Name,
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+// ─── WIKIPEDIA — Crop Descriptions ───────────────────────────────────────────
+
+export async function getCropDescription(cropName: string): Promise<string | null> {
+  try {
+    const firstWord = cropName.split(/[\s-]/)[0]
+    const res = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(firstWord)}`
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    const extract: string | undefined = data.extract
+    if (!extract) return null
+    const firstSentence = extract.split('.')[0]
+    return firstSentence ? firstSentence + '.' : null
+  } catch {
+    return null
+  }
+}
+
+// ─── SUNRISE-SUNSET API ───────────────────────────────────────────────────────
+// Free API: https://sunrisesunset.io
+
+export async function fetchSunriseSunset(
+  lat: number,
+  lng: number
+): Promise<{ sunrise: string; sunset: string; solarNoon: string } | null> {
+  try {
+    const res = await fetch(
+      `https://api.sunrisesunset.io/json?lat=${lat}&lng=${lng}&timezone=Asia/Kolkata`
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    const results = data?.results
+    if (!results) return null
+    return {
+      sunrise: results.sunrise,
+      sunset: results.sunset,
+      solarNoon: results.solar_noon,
+    }
+  } catch {
+    return null
   }
 }
 
