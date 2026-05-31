@@ -11,12 +11,14 @@ import { MapPin } from '@/lib/types'
 const FarmerOSMap = dynamic(() => import('@/components/map/FarmerOSMap'), {
   ssr: false,
   loading: () => (
-    <div className="absolute inset-0 bg-[#060914] flex items-center justify-center">
+    <div className="flex-1 bg-[#060914] flex items-center justify-center">
       <div className="flex flex-col items-center gap-5">
         <div className="relative w-12 h-12">
           <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin" />
-          <div className="absolute inset-2 rounded-full border-2 border-emerald-500/10 border-b-emerald-400/60 animate-spin"
-            style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
+          <div
+            className="absolute inset-2 rounded-full border-2 border-emerald-500/10 border-b-emerald-400/60 animate-spin"
+            style={{ animationDirection: 'reverse', animationDuration: '0.8s' }}
+          />
         </div>
         <div className="text-center">
           <p className="text-white/50 text-sm font-medium">Loading India&apos;s Crop Map</p>
@@ -27,14 +29,13 @@ const FarmerOSMap = dynamic(() => import('@/components/map/FarmerOSMap'), {
   ),
 })
 
-export default function HomeClient() {
+export default function MapClient() {
   const router = useRouter()
   const { user, activeRole, farmerProfile, buyerProfile, myListings, setActiveRole, logout } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
 
   const isLoggedIn = !!user
 
-  // Combine mock pins + user's own listings as map pins
   const userPins: MapPin[] = myListings
     .filter(l => l.status === 'active')
     .map(l => ({
@@ -81,10 +82,10 @@ export default function HomeClient() {
         height: '100svh',
         display: 'flex',
         flexDirection: 'column',
-        paddingTop: '56px', // Reserve space for absolutely-positioned Navbar
+        paddingTop: '56px', // Reserve space for the absolutely-positioned Navbar
       }}
     >
-      {/* Absolutely positioned navbar overlays top */}
+      {/* Absolutely positioned Navbar */}
       <Navbar
         isLoggedIn={isLoggedIn}
         activeRole={activeRole}
@@ -94,7 +95,7 @@ export default function HomeClient() {
         onLogout={handleLogout}
       />
 
-      {/* Map fills remaining space — includes CategoryPillsBar + BottomSheet */}
+      {/* Map fills the rest — FarmerOSMap handles category bar + map + bottom sheet internally */}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         <FarmerOSMap
           pins={allPins}

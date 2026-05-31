@@ -102,6 +102,7 @@ export interface MapPin {
   state: string
   quantity: number
   unit: string
+  expected_price?: number // price per unit set by farmer
   farmer_name?: string // only for logged-in buyers
   farmer_phone?: string // only for logged-in buyers
   farmer_village?: string // only for logged-in buyers

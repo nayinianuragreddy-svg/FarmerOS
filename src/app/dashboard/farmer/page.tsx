@@ -9,8 +9,12 @@ import StatsCard from '@/components/ui/StatsCard'
 import ListingCard from '@/components/listings/ListingCard'
 import {
   Plus, LayoutGrid, EyeOff, Star, AlertTriangle,
-  PackageCheck, Clock, Sprout
+  PackageCheck, Clock, Sprout, TrendingUp
 } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { getMandiPrice, getPriceTickerData } from '@/lib/api'
+
+const WeatherWidget = dynamic(() => import('@/components/dashboard/WeatherWidget'), { ssr: false })
 
 function daysUntil(dateStr: string) {
   return Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000))
@@ -48,16 +52,99 @@ export default function FarmerDashboard() {
       <div className="flex flex-wrap gap-3 mb-8">
         <Link
           href="/list"
-          className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-5 py-2.5 rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-emerald-500/25"
+          className="flex items-center gap-2 text-black font-bold px-5 py-2.5 rounded-xl text-sm transition-all active:scale-95 shadow-lg"
+          style={{ background: '#D4841A', boxShadow: '0 4px 16px rgba(212,132,26,0.3)' }}
         >
           <Plus className="w-4 h-4" strokeWidth={2.5} /> List a New Crop
         </Link>
         <Link
-          href="/"
+          href="/map"
           className="flex items-center gap-2 glass-panel hover:border-white/20 px-5 py-2.5 rounded-xl text-sm text-white/70 hover:text-white transition"
         >
-          🗺️ View on Map
+          🗺️ View Full Map
         </Link>
+      </div>
+
+      {/* Weather + Mandi Price row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        {/* Weather widget */}
+        <WeatherWidget
+          lat={farmerProfile ? 17.385 : 17.385}
+          lng={farmerProfile ? 78.486 : 78.486}
+          cityName={farmerProfile ? `${farmerProfile.village}, ${farmerProfile.district}` : 'Your Farm'}
+        />
+
+        {/* Live mandi prices for listed crops */}
+        <div className="glass-panel p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-white font-bold text-sm">Today&apos;s Mandi Prices</h3>
+            <span className="text-white/30 text-xs ml-auto">Agmarknet · Live</span>
+          </div>
+
+          {myListings.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-white/30 text-sm">List a crop to see price comparisons</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {myListings.slice(0, 5).map(listing => {
+                const mandi = getMandiPrice(listing.crop_name)
+                const yourPrice = listing.expected_price
+                const diff = yourPrice && mandi ? Math.round(((yourPrice - mandi.price) / mandi.price) * 100) : null
+
+                return (
+                  <div key={listing.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-white/4">
+                    <span className="text-base flex-shrink-0">
+                      {listing.crop_name.includes('Tomato') ? '🍅' :
+                       listing.crop_name.includes('Wheat') ? '🌾' :
+                       listing.crop_name.includes('Rice') ? '🍚' : '🌱'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-xs font-semibold truncate">{listing.crop_name}</p>
+                      {mandi ? (
+                        <p className="text-white/40 text-[11px]">
+                          Mandi: ₹{mandi.price}/{mandi.unit} · {mandi.market}
+                        </p>
+                      ) : (
+                        <p className="text-white/30 text-[11px]">No mandi data available</p>
+                      )}
+                    </div>
+                    {diff !== null && (
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        diff >= 0
+                          ? 'bg-emerald-500/15 text-emerald-400'
+                          : 'bg-red-500/15 text-red-400'
+                      }`}>
+                        {diff >= 0 ? '+' : ''}{diff}%
+                      </span>
+                    )}
+                    {!yourPrice && mandi && (
+                      <span className="text-white/30 text-[11px]">No price set</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Top movers */}
+          <div className="border-t border-white/8 pt-3">
+            <p className="text-white/30 text-[10px] font-semibold uppercase tracking-wider mb-2">Top Movers Today</p>
+            <div className="flex flex-wrap gap-1.5">
+              {getPriceTickerData().filter(p => Math.abs(p.change) >= 5).slice(0, 4).map(p => (
+                <span key={p.crop}
+                  className={`text-[11px] px-2 py-1 rounded-full font-medium ${
+                    p.change > 0
+                      ? 'bg-emerald-500/12 text-emerald-400'
+                      : 'bg-red-500/12 text-red-400'
+                  }`}>
+                  {p.emoji} {p.crop} {p.change > 0 ? '↑' : '↓'}{Math.abs(p.change)}%
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Expiry alerts */}

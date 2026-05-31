@@ -1,78 +1,84 @@
 'use client'
 
-import { Flame, SlidersHorizontal, Locate, Layers } from 'lucide-react'
+import type { CSSProperties } from 'react'
+import { Flame, Locate } from 'lucide-react'
 
 interface Props {
   showHeatmap: boolean
   onToggleHeatmap: () => void
-  onToggleFilters: () => void
   onReset: () => void
-  filterCount: number
+  mapStyle: 'dark' | 'satellite'
+  onToggleStyle: () => void
 }
 
 export default function MapControls({
   showHeatmap,
   onToggleHeatmap,
-  onToggleFilters,
   onReset,
-  filterCount,
+  mapStyle,
+  onToggleStyle,
 }: Props) {
-  return (
-    <div className="absolute top-20 right-4 z-20 flex flex-col gap-2">
+  const btnBase: CSSProperties = {
+    width: '40px',
+    height: '40px',
+    borderRadius: '12px',
+    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'rgba(6,9,14,0.85)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    fontSize: '18px',
+    lineHeight: 1,
+    color: 'rgba(255,255,255,0.7)',
+    transition: 'all 0.15s ease',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+  }
 
-      {/* Filter button */}
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: '80px',
+        right: '16px',
+        zIndex: 20,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      {/* Satellite / Dark toggle */}
       <button
-        onClick={onToggleFilters}
-        title="Filter by crop type"
-        className={`relative group flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-xl border backdrop-blur-xl text-sm font-semibold transition-all duration-200 shadow-lg ${
-          filterCount > 0
-            ? 'bg-emerald-500/90 border-emerald-400/80 text-black shadow-emerald-500/30'
-            : 'bg-black/60 border-white/10 text-white/80 hover:text-white hover:border-white/20 hover:bg-black/70'
-        }`}
+        onClick={onToggleStyle}
+        title={mapStyle === 'dark' ? 'Switch to Satellite' : 'Switch to Dark Map'}
+        style={btnBase}
       >
-        <SlidersHorizontal className="w-4 h-4" strokeWidth={2} />
-        <span>Filters</span>
-        {filterCount > 0 && (
-          <span className="bg-black/25 text-black text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-            {filterCount}
-          </span>
-        )}
+        <span>{mapStyle === 'dark' ? '🛰️' : '🌑'}</span>
       </button>
 
       {/* Heatmap toggle */}
       <button
         onClick={onToggleHeatmap}
         title="Toggle heat map"
-        className={`flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-xl border backdrop-blur-xl text-sm font-semibold transition-all duration-200 shadow-lg ${
-          showHeatmap
-            ? 'bg-orange-500/90 border-orange-400/80 text-white shadow-orange-500/30'
-            : 'bg-black/60 border-white/10 text-white/80 hover:text-white hover:border-white/20 hover:bg-black/70'
-        }`}
+        style={{
+          ...btnBase,
+          border: showHeatmap ? '1px solid rgba(249,115,22,0.6)' : btnBase.border,
+          background: showHeatmap ? 'rgba(249,115,22,0.25)' : btnBase.background,
+          color: showHeatmap ? '#fb923c' : 'rgba(255,255,255,0.7)',
+        }}
       >
         <Flame className="w-4 h-4" strokeWidth={2} />
-        <span>Heat Map</span>
       </button>
-
-      {/* Divider */}
-      <div className="h-px bg-white/8 mx-1" />
 
       {/* Reset to India */}
       <button
         onClick={onReset}
         title="Reset to India view"
-        className="flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-xl border border-white/10 bg-black/60 backdrop-blur-xl text-white/60 hover:text-white hover:border-white/20 hover:bg-black/70 text-sm font-medium transition-all duration-200 shadow-lg"
+        style={btnBase}
       >
         <Locate className="w-4 h-4" strokeWidth={2} />
-        <span>India</span>
-      </button>
-
-      {/* Layer info */}
-      <button
-        className="flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-xl border border-white/10 bg-black/60 backdrop-blur-xl text-white/60 hover:text-white hover:border-white/20 hover:bg-black/70 text-sm font-medium transition-all duration-200 shadow-lg cursor-default"
-        title="Map: CARTO dark (free)"
-      >
-        <Layers className="w-4 h-4" strokeWidth={2} />
-        <span>Dark Map</span>
       </button>
     </div>
   )

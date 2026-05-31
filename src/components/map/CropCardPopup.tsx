@@ -1,10 +1,23 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { X, MapPin, Scale, Leaf, Star, Phone, Lock, Calendar } from 'lucide-react'
+import { X, MapPin, Scale, Leaf, Star, Phone, Lock } from 'lucide-react'
 import { MapPin as MapPinType } from '@/lib/types'
 import { CATEGORY_CONFIG } from '@/lib/constants'
 import Link from 'next/link'
+
+const MOCK_MANDI_PRICES: Record<string, number> = {
+  'Tomato': 17,
+  'Onion': 12,
+  'Potato': 15,
+  'Wheat - Sharbati': 23,
+  'Rice - Basmati': 38,
+  'Chilli (Guntur)': 180,
+  'Turmeric': 145,
+  'Groundnut': 65,
+  'Soybean': 43,
+  'Cotton - Long Staple': 72,
+}
 
 interface Props {
   pin: MapPinType
@@ -16,6 +29,11 @@ interface Props {
 export default function CropCardPopup({ pin, position, isLoggedIn, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const config = CATEGORY_CONFIG[pin.crop_category]
+
+  const mandiPrice = MOCK_MANDI_PRICES[pin.crop_name] ?? (pin.expected_price ? Math.round(pin.expected_price * 0.85) : 0)
+  const priceVsMandi = pin.expected_price && mandiPrice > 0
+    ? Math.round(((pin.expected_price - mandiPrice) / mandiPrice) * 100)
+    : 0
 
   // Smart repositioning to stay within viewport
   useEffect(() => {
@@ -112,6 +130,11 @@ export default function CropCardPopup({ pin, position, isLoggedIn, onClose }: Pr
             <span className="text-white font-semibold text-sm">{pin.quantity.toLocaleString()}</span>
             <span className="text-white/40 text-xs">{pin.unit}</span>
           </div>
+          {pin.expected_price && (
+            <div className="flex items-center gap-1">
+              <span className="text-white font-semibold text-sm">₹{pin.expected_price}/{pin.unit}</span>
+            </div>
+          )}
           {pin.rating_avg > 0 && (
             <div className="flex items-center gap-1 ml-auto">
               {[1, 2, 3, 4, 5].map(s => (
@@ -124,6 +147,19 @@ export default function CropCardPopup({ pin, position, isLoggedIn, onClose }: Pr
             </div>
           )}
         </div>
+
+        {/* Mandi price comparison */}
+        {mandiPrice > 0 && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-white/40">Today&apos;s mandi:</span>
+            <span className="text-emerald-400 font-medium">₹{mandiPrice}/kg</span>
+            {pin.expected_price && (
+              <span className={`text-xs font-semibold ${priceVsMandi > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                ({priceVsMandi > 0 ? '+' : ''}{priceVsMandi}% vs mandi)
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Divider */}
         <div className="h-px bg-white/8" />
