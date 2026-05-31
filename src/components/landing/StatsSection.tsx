@@ -66,7 +66,7 @@ function StatCard({ stat, active }: { stat: typeof STATS[0]; active: boolean }) 
     >
       <div
         style={{
-          fontSize: '72px',
+          fontSize: '52px',
           fontWeight: 900,
           color: '#00C97A',
           letterSpacing: '-0.04em',
@@ -98,7 +98,7 @@ export default function StatsSection() {
     <section
       style={{
         background: '#070C0A',
-        padding: '120px 24px',
+        padding: '72px 24px',
       }}
     >
       <div style={{ maxWidth: '1100px', margin: '0 auto' }}>

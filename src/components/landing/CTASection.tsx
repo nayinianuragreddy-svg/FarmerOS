@@ -21,7 +21,7 @@ export default function CTASection() {
     <section
       style={{
         background: 'linear-gradient(180deg, #070C0A 0%, #0D2418 100%)',
-        padding: '120px 24px',
+        padding: '72px 24px',
         textAlign: 'center',
         position: 'relative',
         overflow: 'hidden',

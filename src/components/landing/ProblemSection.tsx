@@ -47,13 +47,13 @@ export default function ProblemSection() {
     <section
       ref={sectionRef}
       style={{
-        minHeight: '90vh',
+        minHeight: '70vh',
         background: '#070C0A',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '80px 24px',
+        padding: '60px 24px',
       }}
     >
       <div

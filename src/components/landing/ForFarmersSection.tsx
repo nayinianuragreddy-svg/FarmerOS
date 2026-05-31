@@ -30,7 +30,7 @@ export default function ForFarmersSection() {
       id="for-farmers"
       style={{
         background: '#070C0A',
-        padding: '120px 24px',
+        padding: '72px 24px',
       }}
     >
       <div
