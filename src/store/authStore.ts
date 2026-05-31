@@ -12,6 +12,12 @@ interface User {
   is_new: boolean
 }
 
+interface SupabaseSession {
+  access_token: string
+  refresh_token: string
+  expires_at?: number
+}
+
 interface Rating {
   id: string
   listing_id: string
@@ -24,6 +30,7 @@ interface Rating {
 
 interface AuthState {
   user: User | null
+  session: SupabaseSession | null
   farmerProfile: FarmerProfile | null
   buyerProfile: BuyerProfile | null
   activeRole: 'farmer' | 'buyer'
@@ -32,6 +39,7 @@ interface AuthState {
   ratings: Rating[]
 
   // Auth actions
+  loginWithSession: (sessionData: SupabaseSession, userData: { id: string; phone: string }) => void
   login: (phone: string) => void
   logout: () => void
   setFarmerProfile: (p: Omit<FarmerProfile, 'id' | 'user_id' | 'rating_avg' | 'rating_count' | 'created_at'>) => void
@@ -66,6 +74,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
+      session: null,
       farmerProfile: null,
       buyerProfile: null,
       activeRole: 'buyer',
@@ -73,9 +82,25 @@ export const useAuthStore = create<AuthState>()(
       savedListingIds: [],
       ratings: [],
 
+      loginWithSession: (sessionData, userData) => {
+        const existing = get().user
+        set({
+          session: sessionData,
+          user: {
+            id: userData.id,
+            phone: userData.phone,
+            active_role: 'buyer',
+            created_at: new Date().toISOString(),
+            is_new: existing?.id === userData.id ? existing.is_new : true,
+          },
+          activeRole: 'buyer',
+        })
+      },
+
+      // Fallback for non-Supabase contexts
       login: (phone: string) => {
         const existing = get().user
-        if (existing?.phone === phone) return // already logged in
+        if (existing?.phone === phone) return
         set({
           user: {
             id: generateId(),
@@ -91,6 +116,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () =>
         set({
           user: null,
+          session: null,
           farmerProfile: null,
           buyerProfile: null,
           activeRole: 'buyer',
@@ -200,6 +226,7 @@ export const useAuthStore = create<AuthState>()(
       name: 'farmeros-auth',
       partialize: (s) => ({
         user: s.user,
+        session: s.session,
         farmerProfile: s.farmerProfile,
         buyerProfile: s.buyerProfile,
         activeRole: s.activeRole,

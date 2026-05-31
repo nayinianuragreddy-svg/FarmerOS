@@ -50,8 +50,21 @@ export default function SetupPage() {
   }
 
   const handleSubmit = async () => {
+    if (!user) return
     setLoading(true)
-    await new Promise(r => setTimeout(r, 700))
+
+    const profile = role === 'farmer'
+      ? { ...form }
+      : { ...form, preferred_crops: preferredCrops }
+
+    // Save to Supabase
+    await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role, profile, user_id: user.id }),
+    })
+
+    // Update local store
     if (role === 'farmer') {
       setFarmerProfile({ ...form })
     } else {

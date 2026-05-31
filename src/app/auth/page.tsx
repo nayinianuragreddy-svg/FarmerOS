@@ -5,14 +5,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Sprout, Phone, ArrowRight, RotateCcw, CheckCircle2, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { createClient } from '@/lib/supabase'
 
 type Step = 'phone' | 'otp' | 'done'
 
-const MOCK_OTP = '123456'
-
 export default function AuthPage() {
   const router = useRouter()
-  const { user, login } = useAuthStore()
+  const { user, loginWithSession } = useAuthStore()
   const [step, setStep] = useState<Step>('phone')
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -40,7 +39,11 @@ export default function AuthPage() {
     if (cleaned.length !== 10) { setError('Enter a valid 10-digit mobile number'); return }
     setError('')
     setLoading(true)
-    await new Promise(r => setTimeout(r, 900)) // simulate network
+    await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: cleaned }),
+    })
     setLoading(false)
     setStep('otp')
     setResendTimer(30)
@@ -69,15 +72,30 @@ export default function AuthPage() {
     if (code.length !== 6) { setError('Enter the 6-digit OTP'); return }
     setError('')
     setLoading(true)
-    await new Promise(r => setTimeout(r, 800))
-    if (code !== MOCK_OTP) {
+
+    const res  = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phone.replace(/\D/g, ''), otp: code }),
+    })
+    const data = await res.json()
+
+    if (!res.ok || !data.session) {
       setLoading(false)
-      setError('Incorrect OTP. (Hint: use 123456)')
+      setError(data.error === 'Invalid OTP' ? 'Incorrect OTP. (Hint: use 123456)' : 'Something went wrong. Try again.')
       setOtp(['', '', '', '', '', ''])
       otpRefs.current[0]?.focus()
       return
     }
-    login(phone)
+
+    // Establish Supabase session in the browser
+    const supabase = createClient()
+    await supabase.auth.setSession({
+      access_token:  data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    })
+
+    loginWithSession(data.session, { id: data.user.id, phone: data.user.phone })
     setStep('done')
     setLoading(false)
     setTimeout(() => {
