@@ -94,25 +94,44 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060914] flex flex-col items-center justify-center px-4 py-12">
+    <div style={{ minHeight: '100vh', background: '#070C0A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', position: 'relative' }}>
 
-      {/* Background glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full opacity-20"
-          style={{ background: 'radial-gradient(ellipse, #10b981 0%, transparent 70%)', filter: 'blur(60px)' }} />
+      {/* Rich background — layered glows */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        {/* Primary emerald glow */}
+        <div style={{
+          position: 'absolute', top: '35%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '700px', height: '500px', borderRadius: '50%',
+          background: 'radial-gradient(ellipse, rgba(0,201,122,0.18) 0%, transparent 65%)',
+          filter: 'blur(40px)',
+        }} />
+        {/* Secondary deep blue-green */}
+        <div style={{
+          position: 'absolute', bottom: '20%', right: '20%',
+          width: '400px', height: '300px', borderRadius: '50%',
+          background: 'radial-gradient(ellipse, rgba(16,110,70,0.12) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+        }} />
       </div>
 
-      <div className="relative w-full max-w-sm">
+      <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
         {/* Logo */}
-        <Link href="/" className="flex items-center justify-center gap-2.5 mb-10 group">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center group-hover:bg-emerald-500/25 transition">
-            <Sprout className="w-5 h-5 text-emerald-400" />
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '40px', textDecoration: 'none' }}>
+          <div style={{
+            width: '48px', height: '48px', borderRadius: '14px',
+            background: 'linear-gradient(135deg, rgba(0,201,122,0.2) 0%, rgba(0,168,98,0.12) 100%)',
+            border: '1px solid rgba(0,201,122,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 24px rgba(0,201,122,0.2)',
+          }}>
+            <Sprout style={{ width: '22px', height: '22px', color: '#00C97A' }} />
           </div>
-          <span className="text-white font-bold text-xl">FarmerOS</span>
+          <span style={{ color: 'white', fontWeight: 800, fontSize: '22px', letterSpacing: '-0.03em', fontFamily: "'Inter', sans-serif" }}>FarmerOS</span>
         </Link>
 
-        {/* Card */}
-        <div className="glass-panel p-7">
+        {/* Card — elevated, glowing */}
+        <div className="glass-card-elevated" style={{ padding: '32px' }}>
 
           {/* ── STEP: PHONE ───────────────────────────────── */}
           {step === 'phone' && (
@@ -149,7 +168,14 @@ export default function AuthPage() {
               <button
                 onClick={handleSendOTP}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-black font-bold py-3.5 rounded-xl text-sm transition-all duration-150 active:scale-98 shadow-lg shadow-emerald-500/20"
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  background: loading ? 'rgba(0,201,122,0.4)' : 'linear-gradient(135deg, #00C97A 0%, #00A862 100%)',
+                  color: '#000', fontWeight: 700, padding: '15px', borderRadius: '13px', fontSize: '15px',
+                  border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 20px rgba(0,201,122,0.35), 0 1px 0 rgba(255,255,255,0.2) inset',
+                  transition: 'all 0.15s ease', letterSpacing: '-0.01em',
+                }}
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>
                   Send OTP <ArrowRight className="w-4 h-4" />
@@ -210,7 +236,14 @@ export default function AuthPage() {
               <button
                 onClick={() => handleVerify()}
                 disabled={loading || otp.join('').length !== 6}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black font-bold py-3.5 rounded-xl text-sm transition-all duration-150 active:scale-98 shadow-lg shadow-emerald-500/20"
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  background: (loading || otp.join('').length !== 6) ? 'rgba(0,201,122,0.25)' : 'linear-gradient(135deg, #00C97A 0%, #00A862 100%)',
+                  color: '#000', fontWeight: 700, padding: '15px', borderRadius: '13px', fontSize: '15px',
+                  border: 'none', cursor: (loading || otp.join('').length !== 6) ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 20px rgba(0,201,122,0.3), 0 1px 0 rgba(255,255,255,0.2) inset',
+                  transition: 'all 0.15s ease', letterSpacing: '-0.01em',
+                }}
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>
                   Verify & Continue <ArrowRight className="w-4 h-4" />
