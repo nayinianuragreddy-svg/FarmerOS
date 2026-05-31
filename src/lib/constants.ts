@@ -1,7 +1,36 @@
 import { CropCategory } from './types'
 
 // ─── MAP ─────────────────────────────────────────────────────────────────────
-export const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+// Inline raster style — no external style.json, no fonts/glyphs needed.
+// Carto dark raster tiles: completely free, no API key, bulletproof.
+import type { StyleSpecification } from 'maplibre-gl'
+
+export const MAP_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+      ],
+      tileSize: 256,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank">CARTO</a>',
+      maxzoom: 19,
+    },
+  },
+  layers: [
+    {
+      id: 'carto-dark-tiles',
+      type: 'raster',
+      source: 'carto-dark',
+      minzoom: 0,
+      maxzoom: 22,
+    },
+  ],
+}
+
 export const INDIA_CENTER: [number, number] = [78.9629, 20.5937]
 export const INDIA_DEFAULT_ZOOM = 5
 export const INDIA_BOUNDS: [[number, number], [number, number]] = [

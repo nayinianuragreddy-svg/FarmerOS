@@ -12,9 +12,10 @@ import MapControls from './MapControls'
 interface FarmerOSMapProps {
   pins?: MapPin[]
   isLoggedIn?: boolean
+  searchQuery?: string
 }
 
-export default function FarmerOSMap({ pins = [], isLoggedIn = false }: FarmerOSMapProps) {
+export default function FarmerOSMap({ pins = [], isLoggedIn = false, searchQuery = '' }: FarmerOSMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map | null>(null)
   const markersRef = useRef<maplibregl.Marker[]>([])
@@ -46,10 +47,36 @@ export default function FarmerOSMap({ pins = [], isLoggedIn = false }: FarmerOSM
 
     map.current.on('load', () => {
       setMapReady(true)
-      addHeatmapSource()
+      // Add heatmap source after map loads
+      if (!map.current!.getSource('listings-heat')) {
+        map.current!.addSource('listings-heat', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] },
+        })
+        map.current!.addLayer({
+          id: 'listings-heatmap',
+          type: 'heatmap',
+          source: 'listings-heat',
+          maxzoom: 14,
+          layout: { visibility: 'none' },
+          paint: {
+            'heatmap-weight': 1,
+            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 0.5, 9, 2],
+            'heatmap-color': [
+              'interpolate', ['linear'], ['heatmap-density'],
+              0,   'rgba(16,185,129,0)',
+              0.25,'rgba(16,185,129,0.5)',
+              0.5, 'rgba(234,179,8,0.65)',
+              0.75,'rgba(249,115,22,0.75)',
+              1,   'rgba(239,68,68,0.9)',
+            ],
+            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 18, 9, 36],
+            'heatmap-opacity': 0.85,
+          },
+        })
+      }
     })
 
-    // Close popup on map click
     map.current.on('click', () => {
       setSelectedPin(null)
       setPopupPos(null)
@@ -59,69 +86,50 @@ export default function FarmerOSMap({ pins = [], isLoggedIn = false }: FarmerOSM
       map.current?.remove()
       map.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ─── HEATMAP SOURCE ───────────────────────────────────────────────────────
-  const addHeatmapSource = useCallback(() => {
-    if (!map.current) return
-    if (map.current.getSource('listings-heat')) return
-
-    map.current.addSource('listings-heat', {
-      type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] },
-    })
-
-    map.current.addLayer({
-      id: 'listings-heatmap',
-      type: 'heatmap',
-      source: 'listings-heat',
-      maxzoom: 12,
-      paint: {
-        'heatmap-weight': 1,
-        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 0.6, 9, 2],
-        'heatmap-color': [
-          'interpolate', ['linear'], ['heatmap-density'],
-          0,   'rgba(16,185,129,0)',
-          0.2, 'rgba(16,185,129,0.4)',
-          0.4, 'rgba(234,179,8,0.6)',
-          0.6, 'rgba(249,115,22,0.7)',
-          0.8, 'rgba(239,68,68,0.8)',
-          1,   'rgba(220,38,38,0.9)',
-        ],
-        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 20, 9, 40],
-        'heatmap-opacity': showHeatmap ? 0.85 : 0,
-      },
-      layout: { visibility: showHeatmap ? 'visible' : 'none' },
-    })
-  }, [showHeatmap])
+  // ─── FILTERED PINS ────────────────────────────────────────────────────────
+  const filteredPins = useCallback(() => {
+    let result = pins
+    if (activeCategories.length > 0) {
+      result = result.filter(p => activeCategories.includes(p.crop_category))
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(p =>
+        p.crop_name.toLowerCase().includes(q) ||
+        p.district.toLowerCase().includes(q) ||
+        p.state.toLowerCase().includes(q),
+      )
+    }
+    return result
+  }, [pins, activeCategories, searchQuery])
 
   // ─── RENDER PINS ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!map.current || !mapReady) return
 
-    // clear old markers
     markersRef.current.forEach(m => m.remove())
     markersRef.current = []
 
-    const filtered = activeCategories.length > 0
-      ? pins.filter(p => activeCategories.includes(p.crop_category))
-      : pins
+    const visible = filteredPins()
 
-    filtered.forEach((pin) => {
+    visible.forEach(pin => {
       const config = CATEGORY_CONFIG[pin.crop_category]
+
       const el = document.createElement('div')
       el.className = 'farmeros-pin'
       el.innerHTML = `
-        <div class="pin-inner" style="background:${config.mapColor}22;border-color:${config.mapColor}">
-          <span class="pin-emoji">${config.emoji}</span>
+        <div class="pin-body" style="--pin-color:${config.mapColor}">
+          <div class="pin-icon">${config.emoji}</div>
         </div>
-        <div class="pin-pulse" style="background:${config.mapColor}"></div>
+        <div class="pin-shadow"></div>
       `
-      el.addEventListener('click', (e) => {
+
+      el.addEventListener('click', e => {
         e.stopPropagation()
         setSelectedPin(pin)
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+        const rect = el.getBoundingClientRect()
         setPopupPos({ x: rect.left + rect.width / 2, y: rect.top })
       })
 
@@ -137,36 +145,31 @@ export default function FarmerOSMap({ pins = [], isLoggedIn = false }: FarmerOSM
     if (src) {
       src.setData({
         type: 'FeatureCollection',
-        features: filtered.map(p => ({
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [p.longitude, p.latitude] },
+        features: visible.map(p => ({
+          type: 'Feature' as const,
+          geometry: { type: 'Point' as const, coordinates: [p.longitude, p.latitude] },
           properties: {},
         })),
       })
     }
-  }, [pins, mapReady, activeCategories])
+  }, [mapReady, filteredPins])
 
   // ─── HEATMAP TOGGLE ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (!map.current || !mapReady) return
-    if (!map.current.getLayer('listings-heatmap')) return
-    map.current.setLayoutProperty(
-      'listings-heatmap',
-      'visibility',
-      showHeatmap ? 'visible' : 'none',
-    )
-    map.current.setPaintProperty('listings-heatmap', 'heatmap-opacity', showHeatmap ? 0.85 : 0)
+    if (!map.current || !mapReady || !map.current.getLayer('listings-heatmap')) return
+    map.current.setLayoutProperty('listings-heatmap', 'visibility', showHeatmap ? 'visible' : 'none')
   }, [showHeatmap, mapReady])
 
-  // ─── FLY TO INDIA ─────────────────────────────────────────────────────────
   const flyToIndia = () => {
-    map.current?.flyTo({ center: INDIA_CENTER, zoom: INDIA_DEFAULT_ZOOM, duration: 1200 })
+    map.current?.flyTo({ center: INDIA_CENTER, zoom: INDIA_DEFAULT_ZOOM, duration: 1400, essential: true })
   }
+
+  const visibleCount = filteredPins().length
 
   return (
     <div className="relative w-full h-full">
-      {/* Map canvas */}
-      <div ref={mapContainer} className="absolute inset-0" />
+      {/* Map canvas — fills parent */}
+      <div ref={mapContainer} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
 
       {/* Controls */}
       <MapControls
@@ -177,7 +180,7 @@ export default function FarmerOSMap({ pins = [], isLoggedIn = false }: FarmerOSM
         filterCount={activeCategories.length}
       />
 
-      {/* Filter Panel */}
+      {/* Filter Drawer */}
       <FilterPanel
         open={showFilters}
         onClose={() => setShowFilters(false)}
@@ -195,12 +198,24 @@ export default function FarmerOSMap({ pins = [], isLoggedIn = false }: FarmerOSM
         />
       )}
 
-      {/* Pin count badge */}
-      {pins.length > 0 && (
-        <div className="absolute bottom-6 right-4 bg-black/70 border border-white/10 backdrop-blur-sm rounded-full px-3 py-1 text-xs text-white/70 pointer-events-none">
-          {pins.length} listing{pins.length !== 1 ? 's' : ''} on map
+      {/* Live pin count */}
+      <div className="absolute bottom-6 right-4 z-10 pointer-events-none">
+        <div
+          className="flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-medium"
+          style={{
+            background: 'rgba(6,9,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(12px)',
+            color: 'rgba(255,255,255,0.5)',
+          }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-emerald-400"
+            style={{ boxShadow: '0 0 6px #10b981' }}
+          />
+          {visibleCount} crop{visibleCount !== 1 ? 's' : ''} on map
         </div>
-      )}
+      </div>
     </div>
   )
 }
