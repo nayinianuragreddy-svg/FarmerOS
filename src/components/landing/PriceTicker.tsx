@@ -41,27 +41,41 @@ export default function PriceTicker() {
         position: 'relative',
       }}
     >
-      {/* Fixed label */}
+      {/* Fixed left panel */}
       <div
         style={{
-          flexShrink: 0,
-          padding: '0 20px',
-          fontSize: '10px',
-          fontWeight: 700,
-          letterSpacing: '0.12em',
-          color: '#00C97A',
-          borderRight: '1px solid rgba(0,201,122,0.2)',
-          height: '100%',
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 160,
+          zIndex: 2,
+          background: 'linear-gradient(90deg, #0A1409 0%, #0A1409 85%, transparent 100%)',
           display: 'flex',
           alignItems: 'center',
-          background: '#0A1409',
-          zIndex: 1,
-          position: 'relative',
-          whiteSpace: 'nowrap',
-          gap: '6px',
+          gap: 10,
+          paddingLeft: 16,
+          paddingRight: 24,
+          flexShrink: 0,
         }}
       >
-        LIVE MANDI PRICES 📊
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: '#00C97A',
+              animation: 'tickerPulse 2s ease-in-out infinite',
+            }}
+          />
+          <span style={{ fontSize: 11, color: '#00C97A', fontWeight: 700, letterSpacing: '0.06em' }}>LIVE</span>
+        </div>
+        <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.12)' }} />
+        <div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: '0.04em' }}>MANDI PRICES</div>
+          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>Agmarknet</div>
+        </div>
       </div>
 
       {/* Fade edges */}
@@ -86,6 +100,7 @@ export default function PriceTicker() {
           animation: 'tickerScroll 40s linear infinite',
           whiteSpace: 'nowrap',
           willChange: 'transform',
+          paddingLeft: '160px',
         }}
       >
         {tickerItems.map((item, i) => {
@@ -139,6 +154,10 @@ export default function PriceTicker() {
         @keyframes tickerScroll {
           from { transform: translateX(0); }
           to { transform: translateX(-50%); }
+        }
+        @keyframes tickerPulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
         }
       `}</style>
     </div>

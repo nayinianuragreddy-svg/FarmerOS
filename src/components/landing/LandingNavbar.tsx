@@ -95,7 +95,53 @@ export default function LandingNavbar() {
               {item.label}
             </a>
           ))}
+          <a
+            href="/data"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              color: 'rgba(255,255,255,0.7)',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: '#00C97A',
+                display: 'inline-block',
+                boxShadow: '0 0 6px #00C97A',
+                animation: 'navPulse 2s ease-in-out infinite',
+              }}
+            />
+            Live Data
+          </a>
+          <a
+            href="/map"
+            style={{
+              color: 'rgba(255,255,255,0.6)',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              transition: 'color 0.2s',
+              letterSpacing: '-0.01em',
+            }}
+            onMouseEnter={(e) => ((e.target as HTMLAnchorElement).style.color = '#FFFFFF')}
+            onMouseLeave={(e) => ((e.target as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.6)')}
+          >
+            Explore Map
+          </a>
         </nav>
+        <style>{`
+          @keyframes navPulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 6px #00C97A; }
+            50% { opacity: 0.4; box-shadow: none; }
+          }
+        `}</style>
 
         {/* Right CTA */}
         <Link

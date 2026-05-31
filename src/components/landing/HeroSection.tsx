@@ -1,14 +1,25 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { MOCK_PINS } from '@/lib/mock-data'
 
-const FarmerOSMap = dynamic(() => import('@/components/map/FarmerOSMap'), {
-  ssr: false,
-  loading: () => <div style={{ width: '100%', height: '100%', background: '#070C0A' }} />,
-})
+const INDIA_PINS = [
+  { top: '11%', left: '41%', emoji: '❄️', label: 'Saffron', color: '#8B5CF6', delay: '0s' },
+  { top: '19%', left: '33%', emoji: '🌾', label: 'Wheat', color: '#F59E0B', delay: '0.3s' },
+  { top: '26%', left: '52%', emoji: '🍚', label: 'Rice', color: '#F59E0B', delay: '0.6s' },
+  { top: '30%', left: '28%', emoji: '🌿', label: 'Mustard', color: '#10B981', delay: '0.9s' },
+  { top: '36%', left: '22%', emoji: '☁️', label: 'Cotton', color: '#6366F1', delay: '1.2s' },
+  { top: '34%', left: '62%', emoji: '🌾', label: 'Wheat', color: '#F59E0B', delay: '1.5s' },
+  { top: '42%', left: '50%', emoji: '🫘', label: 'Soybean', color: '#10B981', delay: '1.8s' },
+  { top: '47%', left: '36%', emoji: '🧅', label: 'Onion', color: '#EF4444', delay: '2.1s' },
+  { top: '53%', left: '55%', emoji: '🍅', label: 'Tomato', color: '#EF4444', delay: '2.4s' },
+  { top: '60%', left: '44%', emoji: '🟡', label: 'Turmeric', color: '#F59E0B', delay: '2.7s' },
+  { top: '70%', left: '40%', emoji: '🌿', label: 'Pepper', color: '#10B981', delay: '3.0s' },
+  { top: '66%', left: '57%', emoji: '🍌', label: 'Banana', color: '#F59E0B', delay: '3.3s' },
+  { top: '30%', left: '74%', emoji: '🍵', label: 'Tea', color: '#10B981', delay: '3.6s' },
+  { top: '22%', left: '66%', emoji: '🍚', label: 'Rice', color: '#10B981', delay: '3.9s' },
+  { top: '48%', left: '26%', emoji: '🥜', label: 'Groundnut', color: '#F59E0B', delay: '4.2s' },
+]
 
 export default function HeroSection() {
   const [line1, setLine1] = useState(false)
@@ -35,81 +46,27 @@ export default function HeroSection() {
         height: '100vh',
         overflow: 'hidden',
         background: '#070C0A',
+        display: 'flex',
       }}
     >
-      {/* RIGHT — Full height map */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: '55%',
-          zIndex: 0,
-        }}
-      >
-        <FarmerOSMap
-          pins={MOCK_PINS}
-          isLoggedIn={false}
-          searchQuery=""
-          compact={true}
-        />
-      </div>
-
-      {/* Gradient overlay — left edge of map fading to dark */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          bottom: 0,
-          left: '35%',
-          width: '220px',
-          background: 'linear-gradient(to right, #070C0A 0%, transparent 100%)',
-          zIndex: 1,
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Bottom gradient — section transition */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '180px',
-          background: 'linear-gradient(to top, #070C0A 0%, transparent 100%)',
-          zIndex: 2,
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Top gradient — navbar blend */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '140px',
-          background: 'linear-gradient(to bottom, rgba(7,12,10,0.7) 0%, transparent 100%)',
-          zIndex: 2,
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Left solid bg so content reads clearly */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: '50%',
-          background: '#070C0A',
-          zIndex: 0,
-        }}
-      />
+      <style>{`
+        @keyframes pinDrop {
+          from { opacity: 0; transform: translate(-50%, calc(-50% - 20px)); }
+          to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+        @keyframes pingRing {
+          0% { transform: scale(1); opacity: 0.7; }
+          100% { transform: scale(3.5); opacity: 0; }
+        }
+        @keyframes heroCountUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes livePulse {
+          0%, 100% { box-shadow: 0 0 0 3px rgba(0,201,122,0.25); }
+          50% { box-shadow: 0 0 0 5px rgba(0,201,122,0.1); }
+        }
+      `}</style>
 
       {/* LEFT — Content */}
       <div
@@ -123,6 +80,8 @@ export default function HeroSection() {
           paddingLeft: 'clamp(24px, 7vw, 96px)',
           paddingRight: '40px',
           maxWidth: '580px',
+          flexShrink: 0,
+          background: '#070C0A',
         }}
       >
         {/* Pill tag */}
@@ -160,11 +119,12 @@ export default function HeroSection() {
           }}
         >
           <span style={lineStyle(line1)}>Every crop.</span>
-          <span style={{ ...lineStyle(line2), marginTop: '4px' }}>Every farmer.</span>
+          <span style={{ ...lineStyle(line2), marginTop: '4px', display: 'block' }}>Every farmer.</span>
           <span
             style={{
               ...lineStyle(line3),
               marginTop: '4px',
+              display: 'block',
               background: 'linear-gradient(135deg, #00C97A 0%, #00A862 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -304,12 +264,133 @@ export default function HeroSection() {
         </div>
       </div>
 
-      <style>{`
-        @keyframes livePulse {
-          0%, 100% { box-shadow: 0 0 0 3px rgba(0,201,122,0.25); }
-          50% { box-shadow: 0 0 0 5px rgba(0,201,122,0.1); }
-        }
-      `}</style>
+      {/* RIGHT — Animated India Visualization */}
+      <div
+        style={{
+          flex: 1,
+          height: '100vh',
+          position: 'relative',
+          overflow: 'hidden',
+          background: '#050A07',
+          backgroundImage: 'radial-gradient(rgba(0,201,122,0.07) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }}
+      >
+        {/* India SVG outline */}
+        <svg
+          viewBox="0 0 380 480"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-48%, -50%)',
+            width: '75%',
+            opacity: 0.6,
+          }}
+        >
+          <path
+            d="M155,28 L178,20 L218,24 L252,36 L288,58 L316,80 L328,108 L322,138 L336,160 L320,180 L296,196 L283,220 L293,244 L282,268 L263,290 L245,316 L228,348 L210,382 L194,418 L182,448 L170,418 L150,380 L128,348 L105,310 L85,278 L70,248 L66,218 L74,192 L60,164 L72,136 L88,116 L108,98 L122,80 L133,62 L143,44 Z"
+            fill="rgba(0,201,122,0.04)"
+            stroke="rgba(0,201,122,0.35)"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+          {/* Sri Lanka */}
+          <ellipse cx="225" cy="460" rx="12" ry="18" fill="none" stroke="rgba(0,201,122,0.2)" strokeWidth="1" />
+        </svg>
+
+        {/* Crop pin dots */}
+        {INDIA_PINS.map((pin, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              top: pin.top,
+              left: pin.left,
+              transform: 'translate(-50%, -50%)',
+              animation: `pinDrop 0.6s ${pin.delay} cubic-bezier(0.34,1.56,0.64,1) both`,
+              zIndex: 2,
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <div style={{ position: 'relative', width: 10, height: 10 }}>
+                <div
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: pin.color,
+                    position: 'relative',
+                    zIndex: 2,
+                    boxShadow: `0 0 8px ${pin.color}60`,
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: -6,
+                    borderRadius: '50%',
+                    border: `1.5px solid ${pin.color}`,
+                    animation: 'pingRing 2.5s ease-out infinite',
+                    opacity: 0,
+                  }}
+                />
+              </div>
+              <span style={{ fontSize: 13, lineHeight: 1 }}>{pin.emoji}</span>
+              <span
+                style={{
+                  fontSize: 9,
+                  color: 'rgba(255,255,255,0.5)',
+                  fontWeight: 500,
+                  letterSpacing: '0.02em',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {pin.label}
+              </span>
+            </div>
+          </div>
+        ))}
+
+        {/* Floating stats card */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 32,
+            right: 24,
+            background: 'rgba(7,12,10,0.88)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 14,
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            padding: '16px 20px',
+            zIndex: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 9,
+              color: '#00C97A',
+              letterSpacing: '0.1em',
+              marginBottom: 8,
+              fontWeight: 700,
+            }}
+          >
+            🟢 LIVE
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
+            <span style={{ fontSize: 24, fontWeight: 700, color: '#FFFFFF' }}>30</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>active listings</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
+            <span style={{ fontSize: 24, fontWeight: 700, color: '#FFFFFF' }}>12</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>crop categories</span>
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 4 }}>
+            Updated just now
+          </div>
+        </div>
+      </div>
     </section>
   )
 }

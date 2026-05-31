@@ -258,6 +258,7 @@ export default function FarmerOSMap({
   }
 
   const [allPins, setAllPins] = useState<MapPin[]>(() => mergePins(pins))
+  const [hasLoaded, setHasLoaded] = useState(false)
 
   // Sync when external pins update
   useEffect(() => {
@@ -283,6 +284,20 @@ export default function FarmerOSMap({
       new maplibregl.AttributionControl({ compact: true }),
       'bottom-left',
     )
+
+    // Inject keyframe animations
+    const styleEl = document.createElement('style')
+    styleEl.id = 'farmeros-map-styles'
+    if (!document.getElementById('farmeros-map-styles')) {
+      styleEl.textContent = `
+        @keyframes freshPing {
+          0% { transform: scale(1); opacity: 0.7; }
+          70% { transform: scale(1.8); opacity: 0; }
+          100% { transform: scale(1.8); opacity: 0; }
+        }
+      `
+      document.head.appendChild(styleEl)
+    }
 
     map.current.on('load', () => {
       addHeatmapLayer()
@@ -458,6 +473,46 @@ export default function FarmerOSMap({
       `
       el.textContent = `${config.emoji} ${quantityLabel}`
 
+      // Fresh listing badge (listed today)
+      const isFresh = pin.created_at
+        ? (Date.now() - new Date(pin.created_at).getTime()) < 86400000 // 24 hours
+        : false
+
+      if (isFresh) {
+        // Pulsing outer ring
+        const ring = document.createElement('div')
+        ring.style.cssText = `
+          position: absolute;
+          inset: -8px;
+          border-radius: 9999px;
+          border: 2px solid rgba(0,201,122,0.6);
+          animation: freshPing 2s ease-out infinite;
+          pointer-events: none;
+        `
+        el.style.position = 'relative'
+        el.style.overflow = 'visible'
+        el.appendChild(ring)
+
+        // "NEW" badge
+        const badge = document.createElement('div')
+        badge.style.cssText = `
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          background: #00C97A;
+          color: #000;
+          font-size: 8px;
+          font-weight: 800;
+          padding: 2px 5px;
+          border-radius: 100px;
+          letter-spacing: 0.05em;
+          pointer-events: none;
+          z-index: 3;
+        `
+        badge.textContent = 'NEW'
+        el.appendChild(badge)
+      }
+
       el.onmouseenter = () => {
         el.style.transform = 'scale(1.15)'
         el.style.zIndex = '10'
@@ -518,6 +573,8 @@ export default function FarmerOSMap({
         })),
       })
     }
+
+    setHasLoaded(true)
   }, [mapReady, filteredPins, compact, onPinClick])
 
   // ─── HEATMAP TOGGLE ───────────────────────────────────────────────────────────
@@ -596,6 +653,25 @@ export default function FarmerOSMap({
 
   const visibleCount = filteredPins().length
 
+  // ─── SEASONAL DATA ─────────────────────────────────────────────────────────
+  const SEASONAL = {
+    1:  { season: 'Rabi Harvest',   emoji: '🌾', msg: 'Wheat & Mustard harvest underway — Punjab, Haryana, UP',               color: '#F59E0B' },
+    2:  { season: 'Rabi Peak',      emoji: '🌾', msg: 'Wheat harvest peak — expect listings from North India',                 color: '#F59E0B' },
+    3:  { season: 'Zaid Sowing',    emoji: '🌱', msg: 'Zaid season — Watermelon, Muskmelon, Cucumber sowing begins',           color: '#10B981' },
+    4:  { season: 'Mango Season',   emoji: '🥭', msg: 'Mango harvest — Alphonso in Ratnagiri, Banganapalli in Andhra',         color: '#F59E0B' },
+    5:  { season: 'Kharif Prep',    emoji: '🌧️', msg: 'Pre-monsoon — Kharif sowing preparation across India',                  color: '#3B82F6' },
+    6:  { season: 'Kharif Sowing',  emoji: '🌧️', msg: 'Monsoon sowing underway — Rice, Cotton, Soybean, Bajra listings incoming', color: '#3B82F6' },
+    7:  { season: 'Kharif Growing', emoji: '🌱', msg: 'Kharif crops growing — Rice, Maize, Cotton across India',               color: '#10B981' },
+    8:  { season: 'Kharif Growing', emoji: '🌱', msg: 'Peak monsoon — vegetables from Maharashtra, Karnataka arriving',          color: '#10B981' },
+    9:  { season: 'Kharif Harvest', emoji: '🌾', msg: 'Kharif harvest begins — Maize, Soybean, early Rice listings',            color: '#F59E0B' },
+    10: { season: 'Major Harvest',  emoji: '🌾', msg: 'Major Kharif harvest — Rice, Cotton, Soybean across India',              color: '#F59E0B' },
+    11: { season: 'Rabi Sowing',    emoji: '🌱', msg: 'Rabi season starts — Wheat, Mustard, Chickpea sowing begins',            color: '#10B981' },
+    12: { season: 'Rabi Growing',   emoji: '❄️', msg: 'Rabi crops growing — Wheat across North, fresh vegetables from South',   color: '#6366F1' },
+  } as const
+
+  const currentMonth = (new Date().getMonth() + 1) as keyof typeof SEASONAL
+  const seasonInfo = SEASONAL[currentMonth]
+
   // ─── COMPACT MODE (hero embed) ─────────────────────────────────────────────
   if (compact) {
     return (
@@ -624,6 +700,23 @@ export default function FarmerOSMap({
         overflow: 'hidden',
       }}
     >
+      {/* Seasonal intelligence bar */}
+      <div style={{
+        background: `${seasonInfo.color}10`,
+        borderBottom: `1px solid ${seasonInfo.color}22`,
+        padding: '7px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        fontSize: 13,
+        flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 16 }}>{seasonInfo.emoji}</span>
+        <span style={{ color: seasonInfo.color, fontWeight: 600, flexShrink: 0 }}>{seasonInfo.season}</span>
+        <span style={{ color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>—</span>
+        <span style={{ color: 'rgba(255,255,255,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{seasonInfo.msg}</span>
+      </div>
+
       {/* Category Pills Bar — fixed 56px strip */}
       <CategoryPillsBar
         activeCategory={activeCategory}
@@ -691,6 +784,69 @@ export default function FarmerOSMap({
             {visibleCount} crop{visibleCount !== 1 ? 's' : ''} on map
           </div>
         </div>
+
+        {/* Empty state — shown when filters produce no results */}
+        {hasLoaded && filteredPins().length === 0 && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 30,
+            textAlign: 'center',
+            pointerEvents: 'auto',
+          }}>
+            <div style={{
+              background: 'rgba(7,12,10,0.92)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 20,
+              padding: '32px 40px',
+              backdropFilter: 'blur(20px)',
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>
+                {activeCategory ? CATEGORY_CONFIG[activeCategory]?.emoji || '🌱' : '🌱'}
+              </div>
+              <p style={{ color: 'white', fontSize: 16, fontWeight: 600, margin: '0 0 6px' }}>
+                No listings found
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, margin: '0 0 20px', lineHeight: 1.5 }}>
+                {activeCategory
+                  ? `No ${CATEGORY_CONFIG[activeCategory]?.label || 'crop'} listings in this area`
+                  : 'No crops listed in this area yet'}
+              </p>
+              <button
+                onClick={() => { setActiveCategory(null) }}
+                style={{
+                  background: '#00C97A',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '10px 20px',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Show all crops
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Scrim overlay — darkens map when bottom sheet is open */}
+        <div
+          onClick={handleCloseSheet}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.35)',
+            backdropFilter: 'blur(1px)',
+            zIndex: 40,
+            opacity: selectedPin ? 1 : 0,
+            pointerEvents: selectedPin ? 'auto' : 'none',
+            transition: 'opacity 0.3s ease',
+          }}
+        />
 
         {/* Bottom Sheet */}
         <BottomSheet

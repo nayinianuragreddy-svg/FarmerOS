@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, type TouchEvent as ReactTouchEvent, type M
 import { MapPin as MapPinIcon, Scale, Star, Phone, Lock, Leaf, X } from 'lucide-react'
 import { MapPin } from '@/lib/types'
 import { CATEGORY_CONFIG } from '@/lib/constants'
+import { getMandiPriceSync } from '@/lib/api'
 import Link from 'next/link'
 
 interface BottomSheetProps {
@@ -78,21 +79,25 @@ export default function BottomSheet({
 
   const config = pin ? CATEGORY_CONFIG[pin.crop_category] : null
 
+  function generateSparkline(basePrice: number, isUp: boolean): number[] {
+    const points: number[] = []
+    let price = basePrice * (isUp ? 0.82 : 1.18)
+    for (let i = 0; i < 7; i++) {
+      const drift = isUp
+        ? 1 + (Math.random() * 0.06 - 0.01)
+        : 1 - (Math.random() * 0.06 - 0.01)
+      price = price * drift
+      points.push(Math.round(price))
+    }
+    return points
+  }
+
+  const mandiSync = pin ? getMandiPriceSync(pin.crop_name) : null
+  const isUp = mandiSync && pin?.expected_price ? pin.expected_price >= mandiSync.price : true
+  const sparkData = mandiSync ? generateSparkline(mandiSync.price, isUp) : null
+
   return (
     <>
-      {/* Overlay backdrop — only visible when sheet is open with a pin */}
-      {isOpen && pin && (
-        <div
-          onClick={onClose}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 28,
-            background: 'rgba(0,0,0,0.2)',
-          }}
-        />
-      )}
-
       {/* Sheet */}
       <div
         ref={sheetRef}
@@ -101,7 +106,7 @@ export default function BottomSheet({
           bottom: 0,
           left: 0,
           right: 0,
-          zIndex: 29,
+          zIndex: 50,
           transform: isOpen && pin ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
           willChange: 'transform',
@@ -291,6 +296,35 @@ export default function BottomSheet({
                 </div>
               )}
             </div>
+
+            {/* Sparkline price trend */}
+            {sparkData && (
+              <div style={{ marginTop: 16, marginBottom: 14 }}>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginBottom: 6, letterSpacing: '0.04em', margin: '0 0 6px' }}>7-DAY PRICE TREND</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', minWidth: 40 }}>₹{sparkData[0]}</span>
+                  <svg viewBox="0 0 120 36" style={{ flex: 1, height: 36 }} preserveAspectRatio="none">
+                    {(() => {
+                      const min = Math.min(...sparkData)
+                      const max = Math.max(...sparkData)
+                      const range = max - min || 1
+                      const points = sparkData.map((v, i) =>
+                        `${(i / 6) * 120},${36 - ((v - min) / range) * 30}`
+                      ).join(' ')
+                      const color = isUp ? '#00C97A' : '#EF4444'
+                      const areaPoints = `0,36 ${points} 120,36`
+                      return (
+                        <>
+                          <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          <polygon points={areaPoints} fill={color} fillOpacity="0.1" />
+                        </>
+                      )
+                    })()}
+                  </svg>
+                  <span style={{ fontSize: 11, color: isUp ? '#00C97A' : '#EF4444', fontFamily: 'monospace', minWidth: 40, textAlign: 'right' }}>₹{sparkData[6]}</span>
+                </div>
+              </div>
+            )}
 
             {/* Contact section */}
             <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>

@@ -108,4 +108,5 @@ export interface MapPin {
   farmer_village?: string // only for logged-in buyers
   rating_avg: number
   status: 'active' | 'hidden'
+  created_at?: string
 }

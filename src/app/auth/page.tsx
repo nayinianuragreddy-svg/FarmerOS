@@ -112,44 +112,64 @@ export default function AuthPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#070C0A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', position: 'relative' }}>
+    <div style={{ minHeight: '100vh', background: '#060B08', display: 'flex', position: 'relative', overflow: 'hidden' }}>
+      <style>{`
+        @keyframes authGlow { 0%,100%{opacity:0.6} 50%{opacity:1} }
+        @keyframes authFadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+      `}</style>
 
-      {/* Rich background — layered glows */}
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-        {/* Primary emerald glow */}
-        <div style={{
-          position: 'absolute', top: '35%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '700px', height: '500px', borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(0,201,122,0.18) 0%, transparent 65%)',
-          filter: 'blur(40px)',
-        }} />
-        {/* Secondary deep blue-green */}
-        <div style={{
-          position: 'absolute', bottom: '20%', right: '20%',
-          width: '400px', height: '300px', borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(16,110,70,0.12) 0%, transparent 70%)',
-          filter: 'blur(60px)',
-        }} />
+      {/* Background — deep, layered */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', top: '20%', left: '30%', width: '600px', height: '600px', borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(0,201,122,0.12) 0%, transparent 60%)', filter: 'blur(80px)', animation: 'authGlow 6s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', bottom: '10%', right: '20%', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(0,120,70,0.08) 0%, transparent 65%)', filter: 'blur(60px)' }} />
+        {/* Grain texture */}
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.025, backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`, backgroundSize: '128px' }} />
       </div>
 
-      <div style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
-        {/* Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '40px', textDecoration: 'none' }}>
-          <div style={{
-            width: '48px', height: '48px', borderRadius: '14px',
-            background: 'linear-gradient(135deg, rgba(0,201,122,0.2) 0%, rgba(0,168,98,0.12) 100%)',
-            border: '1px solid rgba(0,201,122,0.35)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 24px rgba(0,201,122,0.2)',
-          }}>
-            <Sprout style={{ width: '22px', height: '22px', color: '#00C97A' }} />
+      {/* Left panel — context, desktop only */}
+      <div style={{ display: 'none', flex: '0 0 420px', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', borderRight: '1px solid rgba(255,255,255,0.04)', position: 'relative' }} className="auth-left-panel">
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0,201,122,0.12)', border: '1px solid rgba(0,201,122,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Sprout style={{ width: 18, height: 18, color: '#00C97A' }} />
           </div>
-          <span style={{ color: 'white', fontWeight: 800, fontSize: '22px', letterSpacing: '-0.03em', fontFamily: "'Inter', sans-serif" }}>FarmerOS</span>
+          <span style={{ color: 'white', fontWeight: 800, fontSize: 18, letterSpacing: '-0.03em' }}>FarmerOS</span>
+        </Link>
+        <div>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.25)', marginBottom: 24, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600 }}>Why farmers use FarmerOS</p>
+          {['List crops in 3 minutes', 'Buyers find you — you don\'t chase them', 'See live mandi prices before listing', 'Free forever. No commission.'].map((t, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,201,122,0.15)', border: '1px solid rgba(0,201,122,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 10, color: '#00C97A' }}>✓</span>
+              </div>
+              <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1.4 }}>{t}</span>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)' }}>Trusted by farmers across India · Free forever</p>
+      </div>
+
+      {/* Right panel — the form */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', position: 'relative' }}>
+
+        {/* Logo — mobile only (hidden on desktop via left panel) */}
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px', textDecoration: 'none', animation: 'authFadeUp 0.5s ease both' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0,201,122,0.12)', border: '1px solid rgba(0,201,122,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(0,201,122,0.15)' }}>
+            <Sprout style={{ width: 18, height: 18, color: '#00C97A' }} />
+          </div>
+          <span style={{ color: 'white', fontWeight: 800, fontSize: 20, letterSpacing: '-0.03em' }}>FarmerOS</span>
         </Link>
 
-        {/* Card — elevated, glowing */}
-        <div className="glass-card-elevated" style={{ padding: '32px' }}>
+        {/* Card */}
+        <div style={{
+          width: '100%', maxWidth: '380px',
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '20px',
+          padding: '32px',
+          boxShadow: '0 40px 100px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,201,122,0.06), 0 0 60px rgba(0,201,122,0.04)',
+          backdropFilter: 'blur(20px)',
+          animation: 'authFadeUp 0.5s 0.1s ease both',
+        }}>
 
           {/* ── STEP: PHONE ───────────────────────────────── */}
           {step === 'phone' && (
@@ -295,7 +315,7 @@ export default function AuthPage() {
           )}
         </div>
 
-        <p className="text-center text-white/20 text-xs mt-6">
+        <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.18)', fontSize: '12px', marginTop: '24px' }}>
           India&apos;s Crop Discovery Map — Free for all farmers
         </p>
       </div>
