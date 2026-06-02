@@ -317,6 +317,26 @@ INSERT INTO crop_taxonomy (category, name, hindi_name, popular) VALUES
 ON CONFLICT (category, name) DO NOTHING;
 
 -- ============================================================
+-- MANDI PRICE HISTORY ("history clock")
+-- Daily national snapshot per commodity, written once/day by
+-- /api/mandi-snapshot. Builds the price trends the govt feed lacks.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.mandi_history (
+  date         text    NOT NULL,            -- Agmarknet arrival_date, "DD/MM/YYYY"
+  commodity    text    NOT NULL,            -- Agmarknet commodity name
+  avg_modal    integer NOT NULL,            -- national avg modal price, ₹/quintal
+  min_modal    integer NOT NULL,            -- cheapest mandi that day
+  max_modal    integer NOT NULL,            -- dearest mandi that day
+  mandi_count  integer NOT NULL,            -- # mandis reporting that day
+  captured_at  timestamptz DEFAULT now(),
+  PRIMARY KEY (date, commodity)
+);
+ALTER TABLE public.mandi_history ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public read mandi_history" ON public.mandi_history;
+CREATE POLICY "public read mandi_history" ON public.mandi_history FOR SELECT USING (true);
+-- Writes are server-only via the service-role key (bypasses RLS).
+
+-- ============================================================
 -- STORAGE BUCKETS (run in Supabase Storage settings)
 -- ============================================================
 -- Create a public bucket called: crop-images
