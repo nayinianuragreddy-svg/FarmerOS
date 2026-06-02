@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, type TouchEvent as ReactTouchEvent, type M
 import { MapPin as MapPinIcon, Scale, Star, Phone, Lock, Leaf, X } from 'lucide-react'
 import { MapPin } from '@/lib/types'
 import { CATEGORY_CONFIG } from '@/lib/constants'
-import { getMandiPriceSync } from '@/lib/api'
+import { getMandiPriceSync, getMandiPrice } from '@/lib/api'
 import Link from 'next/link'
 
 interface BottomSheetProps {
@@ -92,7 +92,16 @@ export default function BottomSheet({
     return points
   }
 
-  const mandiSync = pin ? getMandiPriceSync(pin.crop_name) : null
+  // Live mandi price for comparison — instant local fallback, then real Agmarknet value
+  const [mandiSync, setMandiSync] = useState<{ price: number; unit: string; market: string; change: number } | null>(null)
+  useEffect(() => {
+    if (!pin) { setMandiSync(null); return }
+    setMandiSync(getMandiPriceSync(pin.crop_name))
+    let active = true
+    getMandiPrice(pin.crop_name).then(p => { if (active && p) setMandiSync(p) })
+    return () => { active = false }
+  }, [pin])
+
   const isUp = mandiSync && pin?.expected_price ? pin.expected_price >= mandiSync.price : true
   const sparkData = mandiSync ? generateSparkline(mandiSync.price, isUp) : null
 

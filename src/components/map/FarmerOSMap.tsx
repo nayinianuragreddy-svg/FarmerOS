@@ -40,187 +40,6 @@ function formatQuantity(quantity: number, unit: string): string {
   return `${kgAmount}kg`
 }
 
-interface NominatimResult {
-  lat: string
-  lon: string
-  display_name: string
-  place_id: number
-}
-
-interface FloatingSearchProps {
-  onFlyTo: (lat: number, lng: number) => void
-  onMapClick: () => void
-}
-
-function FloatingSearch({ onFlyTo, onMapClick: _onMapClick }: FloatingSearchProps) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<NominatimResult[]>([])
-  const [isOpen, setIsOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const wrapperRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!query.trim()) {
-      setResults([])
-      setIsOpen(false)
-      return
-    }
-    if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(async () => {
-      setIsLoading(true)
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ' India')}&format=json&limit=5&countrycodes=in`,
-          { headers: { 'User-Agent': 'FarmerOS/1.0' } },
-        )
-        const data: NominatimResult[] = await res.json()
-        setResults(data)
-        setIsOpen(data.length > 0)
-      } catch {
-        // ignore
-      } finally {
-        setIsLoading(false)
-      }
-    }, 300)
-    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
-  }, [query])
-
-  // Close on click outside
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const handleSelect = (result: NominatimResult) => {
-    onFlyTo(parseFloat(result.lat), parseFloat(result.lon))
-    setQuery(result.display_name.split(',')[0])
-    setIsOpen(false)
-    setResults([])
-  }
-
-  return (
-    <div
-      ref={wrapperRef}
-      style={{
-        position: 'absolute',
-        top: '12px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '360px',
-        maxWidth: 'calc(100vw - 32px)',
-        zIndex: 30,
-      }}
-    >
-      {/* Input */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '0 14px',
-          height: '44px',
-          background: 'rgba(7,12,10,0.9)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: isOpen ? '12px 12px 0 0' : '12px',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
-          transition: 'border-radius 0.1s ease',
-        }}
-      >
-        <span style={{ fontSize: '16px', flexShrink: 0, opacity: 0.5 }}>🔍</span>
-        <input
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Search crops or location..."
-          style={{
-            flex: 1,
-            background: 'transparent',
-            border: 'none',
-            outline: 'none',
-            color: 'white',
-            fontSize: '14px',
-            fontFamily: 'Inter, sans-serif',
-          }}
-        />
-        {isLoading && (
-          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>…</span>
-        )}
-        {query && !isLoading && (
-          <button
-            onClick={() => { setQuery(''); setResults([]); setIsOpen(false) }}
-            style={{
-              flexShrink: 0,
-              background: 'none',
-              border: 'none',
-              color: 'rgba(255,255,255,0.4)',
-              cursor: 'pointer',
-              fontSize: '16px',
-              lineHeight: 1,
-              padding: 0,
-            }}
-          >
-            ×
-          </button>
-        )}
-      </div>
-
-      {/* Dropdown */}
-      {isOpen && results.length > 0 && (
-        <div
-          style={{
-            background: 'rgba(7,12,10,0.97)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: '0 0 12px 12px',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            overflow: 'hidden',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-          }}
-        >
-          {results.map((r) => (
-            <button
-              key={r.place_id}
-              onClick={() => handleSelect(r)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                width: '100%',
-                padding: '10px 14px',
-                background: 'none',
-                border: 'none',
-                borderBottom: '1px solid rgba(255,255,255,0.05)',
-                cursor: 'pointer',
-                textAlign: 'left',
-                color: 'rgba(255,255,255,0.8)',
-                fontSize: '13px',
-                fontFamily: 'Inter, sans-serif',
-                transition: 'background 0.1s ease',
-              }}
-              onMouseEnter={e => { (e.target as HTMLElement).closest('button')!.style.background = 'rgba(255,255,255,0.06)' }}
-              onMouseLeave={e => { (e.target as HTMLElement).closest('button')!.style.background = 'none' }}
-            >
-              <span style={{ flexShrink: 0, fontSize: '14px' }}>📍</span>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {r.display_name.length > 60 ? r.display_name.slice(0, 60) + '…' : r.display_name}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
 interface FarmerOSMapProps {
   pins?: MapPin[]
   isLoggedIn?: boolean
@@ -451,9 +270,19 @@ export default function FarmerOSMap({
       const config = CATEGORY_CONFIG[pin.crop_category]
       const quantityLabel = formatQuantity(pin.quantity, pin.unit)
 
+      // Marker WRAPPER — maplibre owns its position + transform. Never set those here,
+      // or inline styles override maplibre's positioning and the pin stretches full-width.
       const el = document.createElement('div')
       el.className = 'crop-pin'
-      el.style.cssText = `
+      el.style.cssText = `opacity: 0; transition: opacity 0.2s ease; cursor: pointer;`
+
+      // Inner PILL — all visual styling + hover/select live here, isolated from positioning.
+      const pill = document.createElement('div')
+      pill.style.cssText = `
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         background: ${config.mapColor};
         color: white;
         padding: 5px 12px;
@@ -462,16 +291,13 @@ export default function FarmerOSMap({
         font-weight: 700;
         font-family: Inter, sans-serif;
         white-space: nowrap;
-        cursor: pointer;
         border: 2px solid rgba(255,255,255,0.3);
         box-shadow: 0 2px 12px rgba(0,0,0,0.4);
-        transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
         user-select: none;
-        opacity: 0;
-        position: relative;
-        z-index: 1;
       `
-      el.textContent = `${config.emoji} ${quantityLabel}`
+      pill.textContent = `${config.emoji} ${quantityLabel}`
+      el.appendChild(pill)
 
       // Fresh listing badge (listed today)
       const isFresh = pin.created_at
@@ -479,6 +305,7 @@ export default function FarmerOSMap({
         : false
 
       if (isFresh) {
+        pill.style.overflow = 'visible'
         // Pulsing outer ring
         const ring = document.createElement('div')
         ring.style.cssText = `
@@ -489,9 +316,7 @@ export default function FarmerOSMap({
           animation: freshPing 2s ease-out infinite;
           pointer-events: none;
         `
-        el.style.position = 'relative'
-        el.style.overflow = 'visible'
-        el.appendChild(ring)
+        pill.appendChild(ring)
 
         // "NEW" badge
         const badge = document.createElement('div')
@@ -510,19 +335,19 @@ export default function FarmerOSMap({
           z-index: 3;
         `
         badge.textContent = 'NEW'
-        el.appendChild(badge)
+        pill.appendChild(badge)
       }
 
       el.onmouseenter = () => {
-        el.style.transform = 'scale(1.15)'
+        pill.style.transform = 'scale(1.15)'
+        pill.style.boxShadow = '0 4px 20px rgba(0,0,0,0.6)'
         el.style.zIndex = '10'
-        el.style.boxShadow = '0 4px 20px rgba(0,0,0,0.6)'
       }
       el.onmouseleave = () => {
-        if (!el.classList.contains('selected')) {
-          el.style.transform = 'scale(1)'
-          el.style.zIndex = '1'
-          el.style.boxShadow = '0 2px 12px rgba(0,0,0,0.4)'
+        if (!pill.classList.contains('selected')) {
+          pill.style.transform = 'scale(1)'
+          pill.style.boxShadow = '0 2px 12px rgba(0,0,0,0.4)'
+          el.style.zIndex = ''
         }
       }
       el.onclick = (e) => {
@@ -530,21 +355,20 @@ export default function FarmerOSMap({
         if (selectedMarkerEl.current) {
           selectedMarkerEl.current.classList.remove('selected')
           selectedMarkerEl.current.style.transform = 'scale(1)'
-          selectedMarkerEl.current.style.zIndex = '1'
           selectedMarkerEl.current.style.boxShadow = '0 2px 12px rgba(0,0,0,0.4)'
         }
-        el.classList.add('selected')
-        el.style.transform = 'scale(1.2)'
+        pill.classList.add('selected')
+        pill.style.transform = 'scale(1.2)'
+        pill.style.boxShadow = `0 6px 24px ${config.mapColor}80`
+        pill.style.border = '2px solid white'
         el.style.zIndex = '20'
-        el.style.boxShadow = `0 6px 24px ${config.mapColor}80`
-        el.style.border = '2px solid white'
-        selectedMarkerEl.current = el
+        selectedMarkerEl.current = pill
 
         setSelectedPin(pin)
         onPinClick?.(pin)
 
         if (compact) {
-          const rect = el.getBoundingClientRect()
+          const rect = pill.getBoundingClientRect()
           setPopupPos({ x: rect.left + rect.width / 2, y: rect.top })
         }
       }
@@ -632,10 +456,6 @@ export default function FarmerOSMap({
 
   const flyToIndia = () => {
     map.current?.flyTo({ center: INDIA_CENTER, zoom: INDIA_DEFAULT_ZOOM, duration: 1400, essential: true })
-  }
-
-  const flyToLocation = (lat: number, lng: number) => {
-    map.current?.flyTo({ center: [lng, lat], zoom: 10, duration: 1200 })
   }
 
   const handleCloseSheet = () => {
@@ -730,9 +550,6 @@ export default function FarmerOSMap({
       <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
         {/* Map canvas */}
         <div ref={mapContainer} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-
-        {/* Floating search */}
-        <FloatingSearch onFlyTo={flyToLocation} onMapClick={handleCloseSheet} />
 
         {/* Controls */}
         <MapControls

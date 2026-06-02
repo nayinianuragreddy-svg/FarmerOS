@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
@@ -12,7 +12,8 @@ import {
   PackageCheck, Clock, Sprout, TrendingUp
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { getMandiPriceSync, getPriceTickerData } from '@/lib/api'
+import { getMandiPriceSync } from '@/lib/api'
+import { fetchMandiSnapshot, type CommoditySnapshot, commodityEmoji, prettyCommodity } from '@/lib/mandi'
 
 const WeatherWidget = dynamic(() => import('@/components/dashboard/WeatherWidget'), { ssr: false })
 
@@ -28,6 +29,33 @@ export default function FarmerDashboard() {
     if (!user) router.replace('/auth')
     else if (activeRole !== 'farmer') router.replace('/')
   }, [user, activeRole, router])
+
+  // Live national mandi snapshot for price comparisons
+  const [snapshot, setSnapshot] = useState<CommoditySnapshot[]>([])
+  useEffect(() => { fetchMandiSnapshot().then(s => setSnapshot(s.commodities || [])) }, [])
+
+  // Real weather for the farmer's own district (not a hardcoded city)
+  const [coords, setCoords] = useState<{ lat: number; lng: number }>({ lat: 17.385, lng: 78.486 })
+  useEffect(() => {
+    const loc = farmerProfile ? `${farmerProfile.district}, ${farmerProfile.state}` : ''
+    if (!loc.trim()) return
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(loc + ' India')}&format=json&limit=1&countrycodes=in`, { headers: { 'Accept-Language': 'en' } })
+      .then(r => r.json())
+      .then(d => { if (d?.[0]) setCoords({ lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon) }) })
+      .catch(() => {})
+  }, [farmerProfile])
+
+  const findMandi = (cropName: string) => {
+    const n = cropName.toLowerCase()
+    const firstWord = n.split(/[\s/()-]+/)[0]
+    const hit = snapshot.find(c => {
+      const cn = c.commodity.toLowerCase()
+      return n.includes(cn) || (firstWord.length > 2 && cn.includes(firstWord))
+    })
+    if (hit) return { price: hit.avgPerKg, unit: 'kg', market: `${hit.bestMarket}, ${hit.bestState}`, change: 0 }
+    return getMandiPriceSync(cropName)
+  }
+  const topCrops = snapshot.slice(0, 4)
 
   const active  = myListings.filter(l => l.status === 'active')
   const hidden  = myListings.filter(l => l.status === 'hidden')
@@ -69,8 +97,8 @@ export default function FarmerDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
         {/* Weather widget */}
         <WeatherWidget
-          lat={farmerProfile ? 17.385 : 17.385}
-          lng={farmerProfile ? 78.486 : 78.486}
+          lat={coords.lat}
+          lng={coords.lng}
           cityName={farmerProfile ? `${farmerProfile.village}, ${farmerProfile.district}` : 'Your Farm'}
         />
 
@@ -89,7 +117,7 @@ export default function FarmerDashboard() {
           ) : (
             <div className="space-y-2">
               {myListings.slice(0, 5).map(listing => {
-                const mandi = getMandiPriceSync(listing.crop_name)
+                const mandi = findMandi(listing.crop_name)
                 const yourPrice = listing.expected_price
                 const diff = yourPrice && mandi ? Math.round(((yourPrice - mandi.price) / mandi.price) * 100) : null
 
@@ -128,20 +156,19 @@ export default function FarmerDashboard() {
             </div>
           )}
 
-          {/* Top movers */}
+          {/* Most-traded crops today (live) */}
           <div className="border-t border-white/8 pt-3">
-            <p className="text-white/30 text-[10px] font-semibold uppercase tracking-wider mb-2">Top Movers Today</p>
+            <p className="text-white/30 text-[10px] font-semibold uppercase tracking-wider mb-2">Today&apos;s Mandi Prices · Live</p>
             <div className="flex flex-wrap gap-1.5">
-              {getPriceTickerData().filter(p => Math.abs(p.change) >= 5).slice(0, 4).map(p => (
-                <span key={p.crop}
-                  className={`text-[11px] px-2 py-1 rounded-full font-medium ${
-                    p.change > 0
-                      ? 'bg-emerald-500/12 text-emerald-400'
-                      : 'bg-red-500/12 text-red-400'
-                  }`}>
-                  {p.emoji} {p.crop} {p.change > 0 ? '↑' : '↓'}{Math.abs(p.change)}%
+              {topCrops.map(c => (
+                <span key={c.commodity}
+                  className="text-[11px] px-2 py-1 rounded-full font-medium bg-emerald-500/12 text-emerald-400">
+                  {commodityEmoji(c.commodity)} {prettyCommodity(c.commodity)} ₹{c.avgPerKg}/kg
                 </span>
               ))}
+              {topCrops.length === 0 && (
+                <span className="text-white/30 text-[11px]">Loading live prices…</span>
+              )}
             </div>
           </div>
         </div>

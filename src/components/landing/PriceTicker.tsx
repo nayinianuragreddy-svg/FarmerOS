@@ -1,32 +1,36 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getPriceTickerData } from '@/lib/api'
+import { fetchMandiSnapshot, commodityEmoji, prettyCommodity } from '@/lib/mandi'
 
 type TickerItem = {
   crop: string
   emoji: string
   price: number
-  unit: string
-  change: number
+  mandis: number
 }
 
-const FALLBACK = getPriceTickerData()
-
 export default function PriceTicker() {
-  const [items, setItems] = useState<TickerItem[]>(FALLBACK)
+  const [items, setItems] = useState<TickerItem[]>([])
 
   useEffect(() => {
-    fetch('/api/mandi-prices')
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) setItems(data)
-      })
-      .catch(() => {})
+    fetchMandiSnapshot().then((s) => {
+      if (s.commodities?.length) {
+        // Most widely-traded commodities today, real national average price.
+        setItems(
+          s.commodities.slice(0, 20).map((c) => ({
+            crop: prettyCommodity(c.commodity),
+            emoji: commodityEmoji(c.commodity),
+            price: c.avgPerKg,
+            mandis: c.count,
+          })),
+        )
+      }
+    })
   }, [])
 
   // Duplicate for seamless loop
-  const tickerItems = [...items, ...items]
+  const tickerItems = items.length ? [...items, ...items] : []
 
   return (
     <div
@@ -92,28 +96,30 @@ export default function PriceTicker() {
         }}
       />
 
-      {/* Scrolling content */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          animation: 'tickerScroll 40s linear infinite',
-          whiteSpace: 'nowrap',
-          willChange: 'transform',
-          paddingLeft: '160px',
-        }}
-      >
-        {tickerItems.map((item, i) => {
-          const up = item.change > 0
-          const down = item.change < 0
-          return (
+      {tickerItems.length === 0 ? (
+        <div style={{ paddingLeft: 176, fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
+          Loading live mandi prices from Agmarknet…
+        </div>
+      ) : (
+        /* Scrolling content */
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            animation: 'tickerScroll 60s linear infinite',
+            whiteSpace: 'nowrap',
+            willChange: 'transform',
+            paddingLeft: '160px',
+          }}
+        >
+          {tickerItems.map((item, i) => (
             <div
               key={i}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '0 28px',
+                padding: '0 24px',
                 borderRight: '1px solid rgba(255,255,255,0.05)',
               }}
             >
@@ -129,26 +135,15 @@ export default function PriceTicker() {
                   color: '#FFFFFF',
                 }}
               >
-                ₹{item.price}/{item.unit}
+                ₹{item.price}/kg
               </span>
-              {item.change !== 0 && (
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    color: up ? '#00C97A' : '#FF5252',
-                    background: up ? 'rgba(0,201,122,0.1)' : 'rgba(255,82,82,0.1)',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                  }}
-                >
-                  {up ? '▲' : '▼'}{Math.abs(item.change)}%
-                </span>
-              )}
+              <span style={{ fontSize: '10px', color: 'rgba(0,201,122,0.7)', fontWeight: 600 }}>
+                {item.mandis} mandis
+              </span>
             </div>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      )}
 
       <style>{`
         @keyframes tickerScroll {

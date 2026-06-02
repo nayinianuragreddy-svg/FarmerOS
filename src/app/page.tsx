@@ -1,4 +1,4 @@
-import LandingNavbar from '@/components/landing/LandingNavbar'
+import AppNav from '@/components/ui/AppNav'
 import HeroSection from '@/components/landing/HeroSection'
 import PriceTicker from '@/components/landing/PriceTicker'
 import ProblemSection from '@/components/landing/ProblemSection'
@@ -13,7 +13,7 @@ import Footer from '@/components/landing/Footer'
 export default function HomePage() {
   return (
     <main style={{ background: '#070C0A' }}>
-      <LandingNavbar />
+      <AppNav variant="transparent" />
       <HeroSection />
       <PriceTicker />
       <ProblemSection />

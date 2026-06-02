@@ -155,7 +155,7 @@ export default function FilterPanel({ open, onClose, activeCategories, onChange 
         <div className="px-4 pt-3 pb-5 border-t border-white/8">
           <button
             onClick={onClose}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-98 text-black font-bold py-3 rounded-xl transition-all duration-150 text-sm shadow-lg shadow-emerald-500/20"
+            className="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-black font-bold py-3 rounded-xl transition-all duration-150 text-sm shadow-lg shadow-emerald-500/20"
           >
             {activeCategories.length > 0
               ? `Apply ${activeCategories.length} filter${activeCategories.length > 1 ? 's' : ''}`

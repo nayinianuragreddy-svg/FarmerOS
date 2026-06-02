@@ -255,7 +255,7 @@ export default function BuyerDashboard() {
               <button
                 onClick={submitRating}
                 disabled={stars === 0}
-                className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black font-bold text-sm transition active:scale-98">
+                className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black font-bold text-sm transition active:scale-95">
                 Submit Rating
               </button>
             </div>

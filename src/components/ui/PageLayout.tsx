@@ -1,7 +1,8 @@
 'use client'
 
-import Link from 'next/link'
-import { ArrowLeft, Sprout } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import AppNav from './AppNav'
+import { useAuthStore } from '@/store/authStore'
 
 interface PageLayoutProps {
   children: React.ReactNode
@@ -25,37 +26,44 @@ export default function PageLayout({
   children,
   title,
   subtitle,
-  backHref = '/',
+  backHref = '/map',
   backLabel = 'Back to map',
   maxWidth = 'lg',
   centered = false,
 }: PageLayoutProps) {
-  return (
-    <div className="min-h-screen bg-[#060914]">
-      {/* Top bar */}
-      <div className="sticky top-0 z-30 border-b border-white/6"
-        style={{ background: 'rgba(6,9,20,0.9)', backdropFilter: 'blur(20px)' }}>
-        <div className={`${maxWidths[maxWidth]} mx-auto px-4 h-14 flex items-center justify-between`}>
-          <Link
-            href={backHref}
-            className="flex items-center gap-2 text-white/50 hover:text-white/90 transition text-sm group"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-            {backLabel}
-          </Link>
-          <Link href="/" className="flex items-center gap-2 opacity-70 hover:opacity-100 transition">
-            <Sprout className="w-4 h-4 text-emerald-400" />
-            <span className="text-white font-bold text-sm">FarmerOS</span>
-          </Link>
-        </div>
-      </div>
+  const router = useRouter()
+  const { user, activeRole, farmerProfile, buyerProfile, setActiveRole, logout } = useAuthStore()
 
-      {/* Content */}
-      <div className={`${maxWidths[maxWidth]} mx-auto px-4 py-8 ${centered ? 'flex flex-col items-center justify-center min-h-[calc(100vh-56px)]' : ''}`}>
+  const displayName = activeRole === 'farmer' ? farmerProfile?.name : buyerProfile?.name
+
+  const handleRoleToggle = () => {
+    const next = activeRole === 'farmer' ? 'buyer' : 'farmer'
+    setActiveRole(next)
+    if (next === 'farmer' && !farmerProfile) router.push('/auth/setup')
+    else if (next === 'buyer' && !buyerProfile) router.push('/auth/setup')
+    else router.push(`/dashboard/${next}`)
+  }
+
+  const handleLogout = () => { logout(); router.replace('/') }
+
+  return (
+    <div className="min-h-screen bg-[#070C0A]">
+      <AppNav
+        variant="solid"
+        isLoggedIn={!!user}
+        activeRole={activeRole}
+        userName={displayName}
+        onRoleToggle={handleRoleToggle}
+        onLogout={handleLogout}
+        backHref={backHref}
+        backLabel={backLabel}
+      />
+
+      <div className={`${maxWidths[maxWidth]} mx-auto px-4 py-8 ${centered ? 'flex flex-col items-center justify-center min-h-[calc(100vh-64px)]' : ''}`}>
         {(title || subtitle) && (
           <div className={`mb-8 ${centered ? 'text-center' : ''}`}>
             {title && <h1 className="text-white font-bold text-2xl sm:text-3xl">{title}</h1>}
-            {subtitle && <p className="text-white/40 text-sm mt-1.5">{subtitle}</p>}
+            {subtitle && <p className="text-white/45 text-sm mt-1.5">{subtitle}</p>}
           </div>
         )}
         {children}

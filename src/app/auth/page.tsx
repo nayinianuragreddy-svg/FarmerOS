@@ -112,7 +112,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#060B08', display: 'flex', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: '#070C0A', display: 'flex', position: 'relative', overflow: 'hidden' }}>
       <style>{`
         @keyframes authGlow { 0%,100%{opacity:0.6} 50%{opacity:1} }
         @keyframes authFadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }

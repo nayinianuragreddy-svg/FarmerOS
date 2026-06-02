@@ -118,11 +118,11 @@ export default function ListPage() {
   }
 
   const inputCls = (field: string) =>
-    `w-full bg-white/5 border ${errors[field] ? 'border-red-500/40' : 'border-white/10 focus:border-emerald-500/40'} rounded-xl px-4 py-3 text-white text-sm placeholder:text-white/20 outline-none transition`
+    `app-field ${errors[field] ? 'app-field-error' : ''}`
 
   if (done) {
     return (
-      <div className="min-h-screen bg-[#060914] flex items-center justify-center">
+      <div className="min-h-screen bg-[#070C0A] flex items-center justify-center">
         <div className="flex flex-col items-center gap-5 text-center">
           <div className="w-20 h-20 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
             <CheckCircle2 className="w-10 h-10 text-emerald-400" />
@@ -405,7 +405,7 @@ export default function ListPage() {
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-black font-bold py-4 rounded-xl text-base transition-all duration-150 active:scale-98 shadow-lg shadow-emerald-500/25"
+            className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-black font-bold py-4 rounded-xl text-base transition-all duration-150 active:scale-95 shadow-lg shadow-emerald-500/25"
           >
             {submitting
               ? <><Loader2 className="w-5 h-5 animate-spin" /> Publishing listing…</>

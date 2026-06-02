@@ -6,12 +6,60 @@
 html, body {
   height: 100%;
   width: 100%;
-  background: #060914;
+  background: #070C0A;
   color: #f0f0f0;
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* ─── Unified form controls (one input + one button language everywhere) ─── */
+.app-field {
+  width: 100%;
+  height: 48px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 0 14px;
+  color: #fff;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.app-field::placeholder { color: rgba(255,255,255,0.42); }
+.app-field:focus {
+  border-color: rgba(0,201,122,0.55);
+  background: rgba(255,255,255,0.06);
+  box-shadow: 0 0 0 3px rgba(0,201,122,0.15);
+}
+.app-field-error { border-color: rgba(248,113,113,0.6); }
+.app-field-error:focus { border-color: rgba(248,113,113,0.8); box-shadow: 0 0 0 3px rgba(248,113,113,0.15); }
+/* select using .app-field keeps room for a custom chevron */
+select.app-field { appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 36px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2300C97A' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat: no-repeat; background-position: right 14px center; }
+.app-btn-primary {
+  background: linear-gradient(135deg, #00C97A, #00A862);
+  color: #00190E;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,201,122,0.28);
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+}
+.app-btn-primary:hover { filter: brightness(1.06); box-shadow: 0 8px 26px rgba(0,201,122,0.36); }
+.app-btn-primary:active { transform: scale(0.97); }
+.app-btn-ghost {
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.app-btn-ghost:hover { background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.22); }
 
 /* Map pages need overflow hidden */
 .map-page {
@@ -21,14 +69,14 @@ html, body {
 /* ─── Glass Panel — the design language ──────────────────────── */
 /* Premium floating card — visible contrast from any dark background */
 .glass-panel {
-  background: rgba(18, 24, 34, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 16px;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgba(12, 18, 14, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 8px 32px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 8px 32px rgba(0, 0, 0, 0.5),
     0 2px 8px rgba(0, 0, 0, 0.4);
 }
 

@@ -88,17 +88,17 @@ export default function SetupPage() {
     markProfileComplete()
     setStep('done')
     setLoading(false)
-    setTimeout(() => router.replace('/'), 900)
+    setTimeout(() => router.replace(`/dashboard/${role}`), 900)
   }
 
   const toggleCrop = (c: CropCategory) =>
     setPreferredCrops(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c])
 
   const inputCls = (field: string) =>
-    `w-full bg-white/5 border ${errors[field] ? 'border-red-500/50' : 'border-white/10 focus:border-emerald-500/40'} rounded-xl px-4 py-3 text-white text-sm placeholder:text-white/20 outline-none transition`
+    `app-field ${errors[field] ? 'app-field-error' : ''}`
 
   return (
-    <div className="min-h-screen bg-[#060914] flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-[#070C0A] flex flex-col items-center justify-center px-4 py-12">
       {/* Glow */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full opacity-15"
@@ -168,7 +168,7 @@ export default function SetupPage() {
 
               <button
                 onClick={() => setStep('info')}
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3.5 rounded-xl text-sm transition-all active:scale-98 shadow-lg shadow-emerald-500/20"
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3.5 rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
               >
                 Continue as {role === 'farmer' ? 'Farmer' : 'Buyer'} →
               </button>
@@ -240,7 +240,7 @@ export default function SetupPage() {
                   Back
                 </button>
                 <button onClick={handleInfoNext} disabled={loading}
-                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-black font-bold py-3.5 rounded-xl text-sm transition-all active:scale-98 shadow-lg shadow-emerald-500/20">
+                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-black font-bold py-3.5 rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-emerald-500/20">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (role === 'farmer' ? 'Finish Setup' : 'Next →')}
                 </button>
               </div>
@@ -287,7 +287,7 @@ export default function SetupPage() {
                   Back
                 </button>
                 <button onClick={handleSubmit} disabled={loading}
-                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-black font-bold py-3.5 rounded-xl text-sm transition-all active:scale-98 shadow-lg shadow-emerald-500/20">
+                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-black font-bold py-3.5 rounded-xl text-sm transition-all active:scale-95 shadow-lg shadow-emerald-500/20">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Finish Setup 🎉'}
                 </button>
               </div>

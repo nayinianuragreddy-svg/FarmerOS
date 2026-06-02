@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
-import { Plus, User, Sprout, LogOut, LayoutDashboard, Search, X } from 'lucide-react'
+import { Plus, Sprout, LogOut, LayoutDashboard, Search, X } from 'lucide-react'
 import { CROP_TAXONOMY, CATEGORY_CONFIG } from '@/lib/constants'
 import { CropCategory } from '@/lib/types'
 
@@ -194,13 +194,21 @@ export default function Navbar({
             </div>
           </>
         ) : (
-          <Link
-            href="/auth"
-            className="flex items-center gap-2 glass-panel hover:border-emerald-500/30 hover:bg-emerald-500/5 px-4 py-2.5 text-sm font-semibold text-white/90 hover:text-white transition-all duration-200"
-          >
-            <User className="w-4 h-4 text-emerald-400" />
-            <span>Login / Sign up</span>
-          </Link>
+          <>
+            <Link
+              href="/data"
+              className="hidden md:flex items-center px-3.5 py-2.5 text-sm font-medium text-white/55 hover:text-white transition-colors duration-200"
+            >
+              Live Data
+            </Link>
+            <Link
+              href="/auth"
+              className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 active:scale-[0.97] text-black font-bold px-4 py-2.5 rounded-xl text-sm transition-all duration-150 shadow-lg shadow-emerald-500/25"
+            >
+              <span>Sign in</span>
+              <span aria-hidden>→</span>
+            </Link>
+          </>
         )}
       </div>
     </header>

@@ -1,9 +1,9 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/ui/Navbar'
+import AppNav from '@/components/ui/AppNav'
 import { MOCK_PINS } from '@/lib/mock-data'
 import { useAuthStore } from '@/store/authStore'
 import { MapPin } from '@/lib/types'
@@ -11,7 +11,7 @@ import { MapPin } from '@/lib/types'
 const FarmerOSMap = dynamic(() => import('@/components/map/FarmerOSMap'), {
   ssr: false,
   loading: () => (
-    <div className="flex-1 bg-[#060914] flex items-center justify-center">
+    <div className="flex-1 bg-[#070C0A] flex items-center justify-center">
       <div className="flex flex-col items-center gap-5">
         <div className="relative w-12 h-12">
           <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin" />
@@ -33,6 +33,12 @@ export default function MapClient() {
   const router = useRouter()
   const { user, activeRole, farmerProfile, buyerProfile, myListings, setActiveRole, logout } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Seed search from a ?q= deep link (e.g. cross-page CTAs from /data)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q')
+    if (q) setSearchQuery(q)
+  }, [])
 
   const isLoggedIn = !!user
 
@@ -71,26 +77,23 @@ export default function MapClient() {
     router.refresh()
   }
 
-  const displayName = activeRole === 'farmer'
-    ? farmerProfile?.name
-    : buyerProfile?.name
+  const displayName = activeRole === 'farmer' ? farmerProfile?.name : buyerProfile?.name
 
   return (
     <div
-      className="w-screen bg-[#060914] map-page"
-      style={{
-        height: '100svh',
-        display: 'flex',
-        flexDirection: 'column',
-        paddingTop: '56px', // Reserve space for the absolutely-positioned Navbar
-      }}
+      className="w-screen bg-[#070C0A] map-page"
+      style={{ height: '100svh', display: 'flex', flexDirection: 'column' }}
     >
-      {/* Absolutely positioned Navbar */}
-      <Navbar
+      <AppNav
+        variant="solid"
+        showSearch
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearchSubmit={setSearchQuery}
+        searchPlaceholder="Search a crop or place — tomato, Nashik…"
         isLoggedIn={isLoggedIn}
         activeRole={activeRole}
         userName={displayName}
-        onSearch={setSearchQuery}
         onRoleToggle={handleRoleToggle}
         onLogout={handleLogout}
       />
